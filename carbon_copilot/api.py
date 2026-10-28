@@ -150,7 +150,7 @@ def home():
 
 @api.get("/api/health")
 def health():
-    supabase = SupabaseClient(current_app.config["SUPABASE_URL"], current_app.config["SUPABASE_ANON_KEY"])
+    supabase = _supabase()
     cloud_enabled = supabase.health()
     return jsonify({
         "status": "ok",
@@ -220,10 +220,18 @@ def cloud_backup():
         user = supabase.authenticated_user(access_token)
         if not user:
             return _error("Your cloud session has expired. Sign in again.", 401)
+        try:
+            user_namespace = uuid.UUID(user["id"])
+        except (KeyError, TypeError, ValueError):
+            return _error("Supabase returned an invalid user identity; backup was not started.", 502)
         records = _read_activities()
+        cloud_ids = {
+            item["id"]: str(uuid.uuid5(user_namespace, item["id"]))
+            for item in records
+        }
         if records:
             rows = [{
-                "id": item["id"],
+                "id": cloud_ids[item["id"]],
                 "category": item["category"],
                 "subcategory": item["subcategory"],
                 "quantity": item["quantity"],
@@ -245,8 +253,8 @@ def cloud_backup():
                 params={"on_conflict": "id"},
                 headers={"Prefer": "resolution=merge-duplicates,return=minimal"},
                 json=[{
-                    "id": item["id"],
-                    "activity_id": item["id"],
+                    "id": cloud_ids[item["id"]],
+                    "activity_id": cloud_ids[item["id"]],
                     "result": item["calculation"],
                 } for item in records],
             )

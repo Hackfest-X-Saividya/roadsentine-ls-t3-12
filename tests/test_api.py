@@ -3,8 +3,13 @@ import os
 import tempfile
 import unittest
 from datetime import date
+from unittest.mock import Mock, patch
+from uuid import UUID, uuid4
+
+from requests import HTTPError
 
 from carbon_copilot import create_app
+from carbon_copilot.supabase_client import SupabaseClient
 
 
 class ApiTests(unittest.TestCase):
@@ -90,6 +95,140 @@ class ApiTests(unittest.TestCase):
         backup = self.client.post("/api/cloud/backup")
         self.assertEqual(backup.status_code, 401)
         self.assertIn("error", backup.json)
+
+    def test_supabase_health_requires_auth_and_postgrest(self):
+        response_ok = Mock(ok=True)
+        with patch("carbon_copilot.supabase_client.requests.get", return_value=response_ok) as get:
+            self.assertTrue(SupabaseClient("https://example.test", "publishable").health())
+        self.assertEqual(get.call_count, 2)
+        self.assertTrue(get.call_args_list[0].args[0].endswith("/auth/v1/health"))
+        self.assertTrue(get.call_args_list[1].args[0].endswith("/rest/v1/activity_records"))
+        self.assertEqual(get.call_args_list[1].kwargs["params"], {"select": "id", "limit": "0"})
+
+        with patch(
+            "carbon_copilot.supabase_client.requests.get",
+            side_effect=[Mock(ok=True), Mock(ok=False)],
+        ):
+            self.assertFalse(SupabaseClient("https://example.test", "publishable").health())
+
+    def test_supabase_rest_requests_forward_only_user_scoped_auth(self):
+        response = Mock(content=b"")
+        with patch("carbon_copilot.supabase_client.requests.request", return_value=response) as send:
+            result = SupabaseClient("https://example.test", "publishable-test-key").user_scoped_request(
+                "POST",
+                "activity_records",
+                "user-jwt",
+                json=[{"category": "transport"}],
+            )
+        self.assertIsNone(result)
+        response.raise_for_status.assert_called_once_with()
+        kwargs = send.call_args.kwargs
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer user-jwt")
+        self.assertEqual(kwargs["headers"]["apikey"], "publishable-test-key")
+        self.assertNotIn("service_role", kwargs["headers"]["apikey"])
+
+    def test_api_health_reports_reachability_and_not_authentication_state(self):
+        supabase = Mock(configured=True)
+        supabase.health.return_value = True
+        with patch("carbon_copilot.api._supabase", return_value=supabase):
+            response = self.client.get("/api/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["cloudEnabled"])
+        self.assertTrue(response.json["cloudReachable"])
+        self.assertFalse(response.json["aiEnabled"])
+
+    def test_cloud_sign_in_and_sign_up_report_supabase_errors(self):
+        supabase = Mock(configured=True)
+        supabase.sign_in.side_effect = HTTPError("rejected")
+        supabase.sign_up.side_effect = HTTPError("rejected")
+        with patch("carbon_copilot.api._supabase", return_value=supabase):
+            sign_in = self.client.post("/api/cloud/sign-in", json={
+                "email": "user@example.test", "password": "valid-password",
+            })
+            sign_up = self.client.post("/api/cloud/sign-up", json={
+                "email": "new@example.test", "password": "valid-password",
+            })
+        self.assertEqual(sign_in.status_code, 401)
+        self.assertIn("error", sign_in.json)
+        self.assertEqual(sign_up.status_code, 400)
+        self.assertIn("error", sign_up.json)
+
+    def test_cloud_backup_uses_user_jwt_schema_columns_and_user_scoped_uuids(self):
+        activity = self.create_activity()
+        self.assertEqual(activity.status_code, 201)
+        self.client.post("/api/targets", json={"reduction_percentage": 20, "duration_days": 30})
+        self.client.post("/api/actions/transit/complete")
+
+        user_id = str(uuid4())
+        access_token = "test-user-access-token"
+        supabase = Mock(configured=True)
+        supabase.authenticated_user.return_value = {"id": user_id, "email": "user@example.test"}
+        with patch("carbon_copilot.api._supabase", return_value=supabase):
+            response = self.client.post(
+                "/api/cloud/backup",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+
+        self.assertEqual(response.status_code, 200, response.json)
+        self.assertEqual(response.json["activity_count"], 1)
+        self.assertTrue(response.json["target_backed_up"])
+        self.assertEqual(response.json["completed_actions_count"], 1)
+        supabase.authenticated_user.assert_called_once_with(access_token)
+        calls = supabase.user_scoped_request.call_args_list
+        self.assertEqual([call.args[1] for call in calls], [
+            "activity_records", "calculation_results", "targets", "action_completions",
+        ])
+        for call in calls:
+            self.assertEqual(call.args[2], access_token)
+            self.assertNotIn("user_id", call.kwargs["json"][0] if isinstance(call.kwargs["json"], list)
+                             else call.kwargs["json"])
+
+        activity_row = calls[0].kwargs["json"][0]
+        calculation_row = calls[1].kwargs["json"][0]
+        target_row = calls[2].kwargs["json"]
+        completion_row = calls[3].kwargs["json"][0]
+        cloud_activity_id = UUID(activity_row["id"])
+        self.assertEqual(cloud_activity_id, UUID(calculation_row["activity_id"]))
+        self.assertEqual(cloud_activity_id, UUID(calculation_row["id"]))
+        self.assertNotEqual(activity_row["id"], activity.json["id"])
+        self.assertEqual(calls[0].kwargs["params"]["on_conflict"], "id")
+        self.assertEqual(calls[1].kwargs["params"]["on_conflict"], "id")
+        self.assertEqual(calls[2].kwargs["params"]["on_conflict"], "user_id")
+        self.assertEqual(calls[3].kwargs["params"]["on_conflict"], "id")
+        self.assertEqual(target_row["baseline_period_days"], 30)
+        self.assertIs(completion_row["is_measured_reduction"], False)
+
+        with patch("carbon_copilot.api._supabase", return_value=supabase):
+            repeated = self.client.post(
+                "/api/cloud/backup",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+        self.assertEqual(repeated.status_code, 200)
+        repeated_activity = supabase.user_scoped_request.call_args_list[4].kwargs["json"][0]
+        self.assertEqual(repeated_activity["id"], activity_row["id"])
+
+    def test_cloud_backup_rejects_expired_sessions_and_reports_postgrest_errors(self):
+        access_token = "test-user-access-token"
+        supabase = Mock(configured=True)
+        supabase.authenticated_user.return_value = None
+        with patch("carbon_copilot.api._supabase", return_value=supabase):
+            expired = self.client.post(
+                "/api/cloud/backup",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+        self.assertEqual(expired.status_code, 401)
+        supabase.user_scoped_request.assert_not_called()
+
+        supabase.authenticated_user.return_value = {"id": str(uuid4()), "email": "user@example.test"}
+        supabase.user_scoped_request.side_effect = HTTPError("PostgREST rejected request")
+        self.create_activity()
+        with patch("carbon_copilot.api._supabase", return_value=supabase):
+            failed = self.client.post(
+                "/api/cloud/backup",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+        self.assertEqual(failed.status_code, 502)
+        self.assertIn("error", failed.json)
 
     def test_configured_factor_table_is_used_and_saved_in_snapshot(self):
         from carbon_copilot.calculations import DEFAULT_FACTORS
