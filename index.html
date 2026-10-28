@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f2">
+  <meta name="description" content="Track your carbon footprint, choose practical actions, and measure your progress.">
+  <title>Carbon Copilot — Sustainability Advisor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#landing" aria-label="Carbon Copilot home">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span>carbon<span class="brand-light">copilot</span></span>
+      </a>
+      <p class="side-label">WORKSPACE</p>
+      <nav class="side-nav" aria-label="Main navigation">
+        <a class="nav-link" href="#landing"><span class="nav-icon">⌂</span>Home</a>
+        <a class="nav-link active" href="#overview"><span class="nav-icon">▦</span>Dashboard</a>
+        <a class="nav-link" href="#activity"><span class="nav-icon">＋</span>Log activity</a>
+        <a class="nav-link" href="#advisor"><span class="nav-icon">✳</span>AI advisor <span class="nav-new">NEW</span></a>
+        <a class="nav-link" href="#planner"><span class="nav-icon">◷</span>Action planner</a>
+        <a class="nav-link" href="#simulator"><span class="nav-icon">⌁</span>What-if simulator</a>
+        <a class="nav-link" href="#challenge"><span class="nav-icon">30</span>30-day challenge</a>
+        <a class="nav-link" href="#history"><span class="nav-icon">↗</span>Progress</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="side-tip">
+          <div class="tip-icon">✦</div>
+          <strong>Small steps add up</strong>
+          <p>Consistent tracking is the first step to meaningful change.</p>
+          <a href="#activity">Log today's activity <span>→</span></a>
+        </div>
+        <button class="profile-button" id="profileButton" type="button" aria-label="Edit your profile">
+          <span class="avatar">A</span><span class="profile-copy"><strong id="profileName">Alex Morgan</strong><small id="profileLocation">Your sustainability profile</small></span><span class="profile-more">···</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Toggle navigation">☰</button>
+        <div class="breadcrumb">Carbon Copilot <span>/</span> <strong id="breadcrumbPage">Dashboard</strong></div>
+        <div class="topbar-actions"><span class="live-status" id="backendStatus"><span></span> Local mode</span><button class="button button-outline cloud-button" id="cloudButton" type="button">Connect account <span>↗</span></button><button class="icon-button" id="settingsButton" type="button" aria-label="Emission factor settings">⚙</button></div>
+      </header>
+
+      <div class="page-wrap">
+        <section class="landing-hero" id="landing">
+          <div class="landing-copy">
+            <p class="eyebrow"><span class="eyebrow-dot"></span> A PRACTICAL CLIMATE COMPANION</p>
+            <h1>Your carbon footprint,<br><span>with a way forward.</span></h1>
+            <p class="landing-lede">Climate choices can feel complicated. Carbon Copilot turns everyday activity into a clear, personal plan—and helps you measure what changes.</p>
+            <div class="landing-actions"><button class="button button-dark" type="button" data-scroll="#overview">Explore my dashboard <span>→</span></button><button class="landing-secondary" type="button" data-scroll="#activity">Start with one day <span>↓</span></button></div>
+            <div class="landing-proof"><span class="proof-mark">✓</span> Transparent estimates <span class="proof-separator">·</span><span class="proof-mark">✓</span> Practical actions <span class="proof-separator">·</span><span class="proof-mark">✓</span> Measured progress</div>
+          </div>
+          <div class="landing-art" aria-label="Illustration of a measured carbon reduction goal">
+            <div class="art-sun"></div><div class="art-plant plant-one">⌁</div><div class="art-plant plant-two">⌁</div>
+            <div class="art-card art-card-main"><span class="art-card-label">YOUR NEXT STEP</span><span class="art-card-icon">↗</span><strong>One trip, a lighter route.</strong><span class="art-card-caption">Small choices. Real-world context.</span><div class="art-meter"><span></span></div><div class="art-meter-label"><span>Personal progress</span><b>in your hands</b></div></div>
+            <div class="art-stamp"><span>CO₂e</span><b>Estimate<br>→ action</b></div><div class="art-leaf">✳</div>
+          </div>
+          <div class="landing-bottom"><span>START WITH WHAT YOU KNOW</span><span>Transport&nbsp;&nbsp; · &nbsp;&nbsp;Energy&nbsp;&nbsp; · &nbsp;&nbsp;Waste&nbsp;&nbsp; · &nbsp;&nbsp;Progress</span></div>
+        </section>
+
+        <section class="landing-steps" aria-label="How Carbon Copilot works">
+          <article><span class="step-number">01</span><strong>See your impact</strong><p>Log everyday activity. Understand where your estimate comes from.</p></article>
+          <article><span class="step-number">02</span><strong>Choose what fits</strong><p>Compare realistic actions by potential savings, effort, and cost.</p></article>
+          <article><span class="step-number">03</span><strong>Measure the change</strong><p>Track later activity. Keep action estimates separate from observed results.</p></article>
+        </section>
+
+        <section class="welcome-row" id="overview">
+          <div><p class="eyebrow"><span class="eyebrow-dot"></span> YOUR SUSTAINABILITY SNAPSHOT</p><h1>A lighter footprint,<br class="mobile-break"> one day at a time.</h1><p class="welcome-copy">Understand your impact. Find your next best action. See what actually changes.</p></div>
+          <button class="button button-dark" type="button" data-scroll="#activity"><span>＋</span> Log today's activity</button>
+        </section>
+
+        <section class="hero-grid" aria-label="Footprint summary">
+          <article class="card footprint-card">
+            <div class="card-heading"><div><p class="eyebrow muted">LATEST MEASURED FOOTPRINT</p><p class="micro-copy" id="footprintPeriod">Average per recorded day · last 7 days</p></div><span class="date-pill" id="todayPill">TODAY</span></div>
+            <div class="footprint-number"><strong id="currentFootprint">0.0</strong><span>kg <small>CO₂e / day</small></span></div>
+            <div class="delta-line"><span class="delta-badge neutral" id="changeBadge">—</span><span id="changeCaption">Log a week of activity to see your trend</span></div>
+            <div class="hero-divider"></div>
+            <div class="footprint-footer"><span>Target <strong id="targetDaily">Set a target</strong></span><button class="text-button" type="button" data-scroll="#planner">View progress <span>→</span></button></div>
+          </article>
+          <article class="card target-card">
+            <div class="target-card-head"><div class="target-orb">↘</div><span class="status-chip" id="targetStatus">GET STARTED</span></div>
+            <p class="eyebrow muted">YOUR REDUCTION GOAL</p>
+            <h2 id="targetSummary">Make a goal that works for you</h2>
+            <p class="target-description" id="targetDescription">Set a target and Carbon Copilot will help you turn it into practical weekly actions.</p>
+            <div class="progress-label"><span>Progress to goal</span><strong id="goalProgressText">0%</strong></div>
+            <div class="progress-track"><span id="goalProgressBar"></span></div>
+            <button class="text-button target-link" type="button" data-scroll="#planner">Open your planner <span>→</span></button>
+          </article>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading"><div><p class="eyebrow muted">AT A GLANCE</p><h2>Your emissions breakdown</h2></div><label class="select-wrap"><span class="sr-only">Choose breakdown period</span><select id="categoryPeriod"><option value="7">Last 7 recorded days</option><option value="30">Last 30 recorded days</option><option value="all">All recorded days</option></select></label></div>
+          <div class="category-grid">
+            <article class="card category-card"><div class="category-title"><span class="category-icon transport">↗</span><span>Transportation</span><span class="category-menu">···</span></div><strong class="category-value" id="transportValue">0.0 <small>kg</small></strong><div class="category-foot"><span id="transportShare">No data yet</span><span class="category-spark transport-spark">⌁</span></div></article>
+            <article class="card category-card"><div class="category-title"><span class="category-icon electricity">ϟ</span><span>Electricity</span><span class="category-menu">···</span></div><strong class="category-value" id="electricityValue">0.0 <small>kg</small></strong><div class="category-foot"><span id="electricityShare">No data yet</span><span class="category-spark electricity-spark">⌁</span></div></article>
+            <article class="card category-card"><div class="category-title"><span class="category-icon fuel">♨</span><span>Other fuel</span><span class="category-menu">···</span></div><strong class="category-value" id="fuelValue">0.0 <small>kg</small></strong><div class="category-foot"><span id="fuelShare">No data yet</span><span class="category-spark fuel-spark">⌁</span></div></article>
+            <article class="card category-card"><div class="category-title"><span class="category-icon waste">♻</span><span>Waste</span><span class="category-menu">···</span></div><strong class="category-value" id="wasteValue">0.0 <small>kg</small></strong><div class="category-foot"><span id="wasteShare">No data yet</span><span class="category-spark waste-spark">⌁</span></div></article>
+          </div>
+        </section>
+
+        <section class="dashboard-grid">
+          <article class="card chart-card">
+            <div class="section-heading chart-heading"><div><p class="eyebrow muted">YOUR ACTIVITY</p><h2>Footprint over time</h2></div><label class="select-wrap"><span class="sr-only">Choose trend grouping</span><select id="trendPeriod"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label></div>
+            <div class="chart-summary"><strong id="trendSummary">Start logging to see your trend</strong><span id="trendSubsummary">Each point is a measured daily entry.</span></div>
+            <div class="chart-wrap"><canvas id="trendChart" aria-label="Carbon footprint trend chart" role="img"></canvas><div class="chart-empty" id="chartEmpty">Your trend will appear here after you log activity.</div></div>
+            <div class="chart-legend"><span><i class="legend-dot green"></i>Measured footprint</span><span><i class="legend-dot gray"></i>Target daily average</span></div>
+          </article>
+          <article class="card sources-card">
+            <div class="section-heading"><div><p class="eyebrow muted">WHERE TO FOCUS</p><h2>Biggest sources</h2></div><span class="info-dot" title="Based on your selected recorded days">i</span></div>
+            <div class="source-list" id="sourceList"><div class="empty-inline">Log activity to see your largest emission sources.</div></div>
+            <div class="source-insight"><span class="insight-mark">✦</span><p id="sourceInsight">Your personalized insight will appear once you log activity.</p></div>
+          </article>
+        </section>
+
+        <section class="lower-grid">
+          <article class="card advisor-card" id="advisor">
+            <div class="advisor-head"><div class="advisor-avatar">✳</div><div><p class="eyebrow muted">YOUR PERSONAL ADVISOR</p><h2>Ask Carbon Copilot</h2></div><span class="rule-badge"><span></span> READY</span></div>
+            <p class="advisor-intro">I use your logged activity and the same emission factors as your dashboard to suggest realistic next steps.</p>
+            <div class="suggestion-row"><button type="button" class="suggestion-chip">How can I cut 20% this month?</button><button type="button" class="suggestion-chip">What should I focus on first?</button></div>
+            <div class="chat-log" id="chatLog" aria-live="polite"><div class="chat-message assistant-message"><span class="chat-avatar">✳</span><p>Hi! I can help you find practical ways to lower your footprint. Log some activity first for advice tailored to your biggest sources.</p></div></div>
+            <form class="chat-form" id="advisorForm"><label for="advisorInput" class="sr-only">Ask a sustainability question</label><input id="advisorInput" type="text" maxlength="400" placeholder="Ask how you can reduce your impact…" autocomplete="off"><button type="submit" aria-label="Send question">↑</button></form>
+            <p class="advisor-disclaimer">Recommendations are estimates, not guarantees. Your activity data stays in this browser.</p>
+          </article>
+          <article class="card action-preview-card">
+            <div class="section-heading"><div><p class="eyebrow muted">YOUR NEXT BEST MOVES</p><h2>Recommended actions</h2></div><button class="text-button" type="button" data-scroll="#planner">See all <span>→</span></button></div>
+            <div id="recommendationPreview" class="recommendation-preview"><div class="empty-inline">Add activity to unlock personalized recommendations.</div></div>
+          </article>
+        </section>
+
+        <section class="card activity-section" id="activity">
+          <div class="section-heading"><div><p class="eyebrow muted">YOUR DAILY LOG</p><h2>Log your activity</h2><p class="section-subtitle">Enter a day's activity. Save again for that date to update it.</p></div><button class="text-button" id="toggleFactors" type="button">Calculation factors <span>＋</span></button></div>
+          <div class="factor-panel" id="factorPanel" hidden>
+            <div class="factor-panel-top"><div><strong>Emission factors</strong><p>Editable planning defaults. Changes recalculate all saved entries.</p></div><button id="resetFactors" class="text-button" type="button">Reset defaults</button></div>
+            <div class="factor-grid">
+              <label>Electricity <span>kg CO₂e / kWh</span><input type="number" min="0" step="0.001" data-factor="electricity"></label>
+              <label>Petrol <span>kg CO₂e / litre</span><input type="number" min="0" step="0.01" data-factor="petrol"></label>
+              <label>Diesel <span>kg CO₂e / litre</span><input type="number" min="0" step="0.01" data-factor="diesel"></label>
+              <label>LPG <span>kg CO₂e / kg</span><input type="number" min="0" step="0.01" data-factor="lpg"></label>
+              <label>Other fuel <span>kg CO₂e / litre</span><input type="number" min="0" step="0.01" data-factor="otherFuel"></label>
+              <label>Food waste <span>kg CO₂e / kg</span><input type="number" min="0" step="0.01" data-factor="foodWaste"></label>
+              <label>Paper waste <span>kg CO₂e / kg</span><input type="number" min="0" step="0.01" data-factor="paperWaste"></label>
+              <label>Plastic waste <span>kg CO₂e / kg</span><input type="number" min="0" step="0.01" data-factor="plasticWaste"></label>
+              <label>Other waste <span>kg CO₂e / kg</span><input type="number" min="0" step="0.01" data-factor="otherWaste"></label>
+              <label>Petrol car <span>kg CO₂e / vehicle-km</span><input type="number" min="0" step="0.001" data-factor="petrolCar"></label>
+              <label>Diesel car <span>kg CO₂e / vehicle-km</span><input type="number" min="0" step="0.001" data-factor="dieselCar"></label>
+              <label>Electric car <span>kg CO₂e / vehicle-km</span><input type="number" min="0" step="0.001" data-factor="electricCar"></label>
+              <label>Motorcycle <span>kg CO₂e / vehicle-km</span><input type="number" min="0" step="0.001" data-factor="motorcycle"></label>
+              <label>Bus <span>kg CO₂e / passenger-km</span><input type="number" min="0" step="0.001" data-factor="bus"></label>
+              <label>Rail / metro <span>kg CO₂e / passenger-km</span><input type="number" min="0" step="0.001" data-factor="rail"></label>
+              <label>Walking / cycling <span>kg CO₂e / km</span><input type="number" min="0" step="0.001" data-factor="active"></label>
+            </div>
+            <p class="factor-source">Default factors are illustrative, editable estimates for personal planning—not a formal inventory. Grid electricity varies by region and year. See factor sources and assumptions in <a href="README.md#emission-factors" target="_blank" rel="noreferrer">the project notes</a>.</p>
+          </div>
+          <form id="activityForm">
+            <div class="form-topline"><label class="field-label" for="entryDate">Activity date</label><span class="entry-note">All amounts are user-entered unless noted.</span></div>
+            <div class="date-field"><input type="date" id="entryDate" required><span class="date-existing" id="dateExisting"></span></div>
+            <div class="activity-form-grid">
+              <fieldset class="activity-group"><legend><span class="group-icon transport">↗</span>Transportation <small>distance for the day</small></legend>
+                <label class="field-label" for="vehicleDistance">Personal vehicle distance <span>km</span></label>
+                <div class="input-unit"><input id="vehicleDistance" type="number" min="0" step="0.1" value="0"><span>km</span></div>
+                <label class="field-label" for="vehicleType">Vehicle type &amp; fuel</label>
+                <div class="paired-fields"><select id="vehicleType" aria-label="Vehicle type"><option value="petrolCar">Car</option><option value="motorcycle">Motorcycle</option><option value="electricCar">Electric car</option><option value="active">Walking / cycling</option></select><select id="vehicleFuel" aria-label="Vehicle fuel"><option value="petrol">Petrol</option><option value="diesel">Diesel</option></select></div>
+                <p class="field-hint">Car and motorcycle distance uses a per-km estimate. Vehicle fuel litres are not entered again below.</p>
+                <label class="field-label" for="busDistance">Bus / shared transit <span>passenger-km</span></label><div class="input-unit"><input id="busDistance" type="number" min="0" step="0.1" value="0"><span>km</span></div>
+                <label class="field-label" for="railDistance">Rail / metro <span>passenger-km</span></label><div class="input-unit"><input id="railDistance" type="number" min="0" step="0.1" value="0"><span>km</span></div>
+              </fieldset>
+              <fieldset class="activity-group"><legend><span class="group-icon electricity">ϟ</span>Electricity <small>home or workspace</small></legend>
+                <label class="field-label" for="electricityKwh">Electricity consumed <span>kWh</span></label><div class="input-unit"><input id="electricityKwh" type="number" min="0" step="0.1" value="0"><span>kWh</span></div>
+                <p class="field-hint">Exclude electricity used to charge an electric vehicle already counted by its distance estimate.</p>
+                <label class="field-label" for="petrolLitres">Petrol <span>non-transport fuel</span></label><div class="input-unit"><input id="petrolLitres" type="number" min="0" step="0.1" value="0"><span>L</span></div>
+                <label class="field-label" for="dieselLitres">Diesel <span>non-transport fuel</span></label><div class="input-unit"><input id="dieselLitres" type="number" min="0" step="0.1" value="0"><span>L</span></div>
+                <label class="field-label" for="lpgKg">LPG <span>non-transport fuel</span></label><div class="input-unit"><input id="lpgKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
+                <label class="field-label" for="otherFuelLitres">Other liquid fuel <span>non-transport</span></label><div class="input-unit"><input id="otherFuelLitres" type="number" min="0" step="0.1" value="0"><span>L</span></div>
+              </fieldset>
+              <fieldset class="activity-group"><legend><span class="group-icon waste">♻</span>Waste <small>discarded per day</small></legend>
+                <label class="field-label" for="foodWasteKg">Food waste</label><div class="input-unit"><input id="foodWasteKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
+                <label class="field-label" for="paperWasteKg">Paper</label><div class="input-unit"><input id="paperWasteKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
+                <label class="field-label" for="plasticWasteKg">Plastic</label><div class="input-unit"><input id="plasticWasteKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
+                <label class="field-label" for="otherWasteKg">Other mixed waste</label><div class="input-unit"><input id="otherWasteKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
+                <p class="field-hint">Waste factors are broad estimates and depend on treatment (landfill, recycling, composting).</p>
+              </fieldset>
+            </div>
+            <div class="form-actions"><span class="calculation-note">Estimates are recalculated using the factors above.</span><button type="submit" class="button button-dark">Save daily activity <span>→</span></button></div>
+          </form>
+          <div class="calculation-preview" id="calculationPreview" aria-live="polite"></div>
+          <div class="success-message" id="saveMessage" role="status" aria-live="polite"></div>
+        </section>
+
+        <section class="card planner-section" id="planner">
+          <div class="section-heading planner-heading"><div><p class="eyebrow muted">TURN INTENT INTO ACTION</p><h2>Your reduction planner</h2><p class="section-subtitle">Set a target, choose actions, and measure them against real activity—not checkmarks.</p></div><button class="button button-outline" id="editGoalButton" type="button">Set your goal <span>＋</span></button></div>
+          <div class="goal-editor" id="goalEditor" hidden>
+            <form id="goalForm" class="goal-form">
+              <label>Reduce by <div class="input-unit"><input id="goalPercent" type="number" min="1" max="90" value="20" required><span>%</span></div></label>
+              <label>Within <select id="goalDays"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></label>
+              <label>Profile name <input id="userName" type="text" maxlength="50" placeholder="Your name"></label>
+              <label>Location <input id="userLocation" type="text" maxlength="80" placeholder="City or region (optional)"></label>
+              <label>Budget preference <select id="userBudget"><option value="any">Any budget</option><option value="free">Free / low cost</option><option value="moderate">Moderate</option></select></label>
+              <label>Transport options <select id="userTransport"><option value="any">Flexible</option><option value="transit">Public transit available</option><option value="limited">Limited alternatives</option></select></label>
+              <label>Lifestyle / preferences <input id="userPreferences" type="text" maxlength="140" placeholder="Optional, e.g. low-effort changes"></label>
+              <button type="submit" class="button button-dark">Save goal <span>→</span></button>
+            </form>
+          </div>
+          <div class="planner-overview">
+            <div class="planner-metric"><span class="metric-label">Baseline average</span><strong id="baselineMetric">— <small>kg / day</small></strong><span id="baselineMeta">Log activity to establish your baseline</span></div>
+            <div class="planner-arrow">→</div>
+            <div class="planner-metric target-metric"><span class="metric-label">Target average</span><strong id="plannerTargetMetric">— <small>kg / day</small></strong><span id="plannerTargetMeta">Set a reduction target</span></div>
+            <div class="planner-arrow">↗</div>
+            <div class="planner-metric"><span class="metric-label">Latest measured</span><strong id="latestMetric">— <small>kg / day</small></strong><span id="latestMeta">Based on recent recorded days</span></div>
+            <div class="planner-gap"><span>Remaining gap</span><strong id="remainingGap">—</strong><div class="mini-progress"><span id="plannerProgressBar"></span></div></div>
+          </div>
+          <div class="planner-columns">
+            <div class="plan-actions"><div class="subsection-title"><h3>Actions for your week</h3><span class="count-pill" id="plannedCount">0 selected</span></div><div id="planList" class="plan-list"><div class="empty-inline">Choose recommended actions below to build your plan.</div></div></div>
+            <div class="completed-actions"><div class="subsection-title"><h3>Completed actions</h3><span class="count-pill" id="completedCount">0 completed</span></div><div id="completedList" class="completed-list"><div class="empty-inline">Completed actions will be recorded here. They are estimates until activity confirms a change.</div></div></div>
+          </div>
+          <div class="measurement-note"><span>ⓘ</span><p><strong>A completed action is not a measured reduction.</strong> Estimated savings show the potential weekly impact of your planned actions. Observed change is calculated from your per-recorded-day baseline and recent footprint, so it can also reflect changes in activity and normal variation.</p></div>
+        </section>
+
+        <section class="differentiator-grid">
+          <article class="card simulator-section" id="simulator">
+            <div class="section-heading"><div><p class="eyebrow muted">EXPLORE BEFORE YOU COMMIT</p><h2>What-if simulator</h2><p class="section-subtitle">Try one change at a time. Savings use your recent activity and configured factors.</p></div><span class="simulator-icon">⌁</span></div>
+            <div class="simulator-controls">
+              <label>Shift car distance to rail <strong><span id="simCarLabel">0</span>%</strong><input id="simCarPercent" type="range" min="0" max="50" value="0" step="5"></label>
+              <label>Reduce electricity use <strong><span id="simElectricityLabel">0</span>%</strong><input id="simElectricityPercent" type="range" min="0" max="50" value="0" step="5"></label>
+              <label>Prevent food waste <strong><span id="simFoodLabel">0</span>%</strong><input id="simFoodPercent" type="range" min="0" max="75" value="0" step="5"></label>
+            </div>
+            <div class="simulator-result"><div><span>Recent average</span><strong id="simBaseline">— kg/day</strong></div><span class="simulator-arrow">→</span><div><span>Scenario estimate</span><strong id="simResult">— kg/day</strong></div><div class="sim-saving"><span>Potential avoided</span><strong id="simSaving">0.0 kg/week</strong></div></div>
+            <p class="simulator-note" id="simulatorNote">No activity yet. Log a few days to compare scenarios. Combined category scenarios are illustrative and are not guarantees.</p>
+          </article>
+          <article class="card challenge-section" id="challenge">
+            <div class="section-heading"><div><p class="eyebrow muted">A GENTLE NUDGE, NOT A STREAK</p><h2>Your 30-day challenge</h2><p class="section-subtitle">Build a rhythm: log, learn, choose one action, repeat.</p></div><span class="challenge-icon">30</span></div>
+            <div class="challenge-progress"><div class="challenge-progress-label"><span id="challengeDayLabel">A month of small experiments</span><strong id="challengeLogCount">0 / 30 logged days</strong></div><div class="progress-track"><span id="challengeProgress"></span></div></div>
+            <div class="challenge-weeks" id="challengeWeeks">
+              <div><span>WEEK 01</span><strong>Notice your biggest source</strong><small>Log a few ordinary days.</small></div>
+              <div><span>WEEK 02</span><strong>Choose one small action</strong><small>Try what fits your routine.</small></div>
+              <div><span>WEEK 03</span><strong>Keep what feels doable</strong><small>Update your activity data.</small></div>
+              <div><span>WEEK 04</span><strong>Reflect on the change</strong><small>Compare averages, not promises.</small></div>
+            </div>
+            <div class="challenge-footer"><p id="challengeMessage">Your check-ins are based on recorded days, not a perfect streak.</p><button class="button button-outline" id="challengeButton" type="button">Start 30-day challenge <span>→</span></button></div>
+          </article>
+        </section>
+
+        <section class="card history-section" id="history">
+          <div class="section-heading"><div><p class="eyebrow muted">MEASURE WHAT CHANGES</p><h2>Your progress &amp; activity history</h2><p class="section-subtitle">Comparisons use average emissions per recorded day to account for different logging periods.</p></div><button class="text-button" id="exportButton" type="button">Export data <span>↓</span></button></div>
+          <div class="progress-stats">
+            <div><span>Baseline → latest</span><strong id="absoluteChange">—</strong><small id="percentageChange">Waiting for enough data</small></div>
+            <div><span>Observed change vs baseline</span><strong id="observedChange">—</strong><small id="observedDescription">Daily-average comparison</small></div>
+            <div><span>Estimated action savings</span><strong id="estimatedSavings">0.0 <small>kg / week</small></strong><small>Potential only; not verified</small></div>
+          </div>
+          <div class="history-table-wrap"><table class="history-table"><thead><tr><th>Date</th><th>Transportation</th><th>Electricity</th><th>Other fuel</th><th>Waste</th><th>Total</th><th></th></tr></thead><tbody id="historyBody"><tr><td class="table-empty" colspan="7">No activity recorded yet. Use the daily log to get started.</td></tr></tbody></table></div>
+          <p class="uncertainty-note">Estimates have uncertainty from activity recall, local grid intensity, travel occupancy, and waste treatment. Use trends as a personal planning tool—not as a verified carbon account.</p>
+        </section>
+
+        <footer class="footer"><span>Carbon Copilot <span class="footer-dot">·</span> Personal planning, grounded in your data.</span><button type="button" id="clearDataButton">Clear local data</button><span id="storageNote">Activity is stored in this browser.</span></footer>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="confirmModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <span class="modal-icon">↺</span><h2 id="modalTitle">Clear your local data?</h2><p>This removes activity records, your profile, and planner from this browser. This cannot be undone.</p>
+      <div class="modal-actions"><button type="button" class="button button-outline" id="cancelClear">Keep my data</button><button type="button" class="button button-danger" id="confirmClear">Clear data</button></div>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="authModal" hidden>
+    <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button class="modal-close" id="closeAuth" type="button" aria-label="Close dialog">×</button>
+      <span class="modal-icon">↗</span><p class="eyebrow muted">OPTIONAL CLOUD BACKUP</p><h2 id="authTitle">Connect your account</h2>
+      <p class="auth-copy" id="authDescription">Create a Supabase account or sign in to sync your activity across devices. Local tracking works without an account.</p>
+      <form class="auth-form" id="authForm">
+        <label>Email address<input type="email" id="authEmail" required maxlength="254" autocomplete="email" placeholder="you@example.com"></label>
+        <label>Password<input type="password" id="authPassword" required maxlength="128" autocomplete="current-password" placeholder="Your password"></label>
+        <p class="auth-error" id="authError" role="status" aria-live="polite"></p>
+        <button class="button button-dark" id="authSubmit" type="submit">Sign in securely <span>→</span></button>
+      </form>
+      <div class="auth-footer"><span id="authModeLabel">New here?</span><button class="text-button" id="authModeToggle" type="button">Create an account</button></div>
+      <div class="cloud-connected" id="cloudConnected" hidden><span>✓</span><strong>Account connected</strong><p id="cloudUserLabel"></p><button class="button button-outline" id="syncButton" type="button">Sync this browser <span>↻</span></button><button class="text-button" id="signOutButton" type="button">Sign out</button></div>
+      <p class="auth-footnote">Cloud sync is optional and available only after configuring Supabase. Never enter payment details here.</p>
+    </div>
+  </div>
+</body>
+</html>

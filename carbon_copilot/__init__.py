@@ -1,0 +1,2 @@
+"""Carbon Copilot backend package."""
+
