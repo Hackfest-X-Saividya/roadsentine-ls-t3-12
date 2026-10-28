@@ -89,7 +89,7 @@
               <div class="summary-stat"><span>Largest source</span><strong id="largestSource">—</strong><small id="largestSourceAmount">Log activity to see your largest source.</small></div>
               <div class="summary-stat"><span>Monthly change</span><strong class="summary-change neutral" id="changeBadge">—</strong><small id="changeCaption">Log activity in two months to compare.</small></div>
             </div>
-            <div class="footprint-footer"><span>Target <strong id="targetDaily">Set a target</strong></span><button class="text-button" type="button" data-scroll="#planner">View progress <span>→</span></button></div>
+            <div class="footprint-footer"><button class="text-button" type="button" data-scroll="#planner">View progress <span>→</span></button></div>
           </article>
           <article class="card target-card">
             <div class="target-card-head"><div class="target-orb">↘</div><span class="status-chip" id="targetStatus">GET STARTED</span></div>
@@ -106,10 +106,10 @@
         <section class="section-block">
           <div class="section-heading"><div><p class="eyebrow muted">AT A GLANCE</p><h2>Your emissions breakdown</h2></div><label class="select-wrap"><span class="sr-only">Choose breakdown period</span><select id="categoryPeriod"><option value="7">Last 7 recorded days</option><option value="30">Last 30 recorded days</option><option value="all">All recorded days</option></select></label></div>
           <div class="category-grid">
-            <article class="card category-card"><div class="category-title"><span class="category-icon transport">↗</span><span>Transportation</span><span class="category-menu">···</span></div><strong class="category-value" id="transportValue">0.0 <small>kg</small></strong><div class="category-foot"><span id="transportShare">No data yet</span><span class="category-spark transport-spark">⌁</span></div></article>
-            <article class="card category-card"><div class="category-title"><span class="category-icon electricity">ϟ</span><span>Electricity</span><span class="category-menu">···</span></div><strong class="category-value" id="electricityValue">0.0 <small>kg</small></strong><div class="category-foot"><span id="electricityShare">No data yet</span><span class="category-spark electricity-spark">⌁</span></div></article>
-            <article class="card category-card"><div class="category-title"><span class="category-icon fuel">♨</span><span>Other fuel</span><span class="category-menu">···</span></div><strong class="category-value" id="fuelValue">0.0 <small>kg</small></strong><div class="category-foot"><span id="fuelShare">No data yet</span><span class="category-spark fuel-spark">⌁</span></div></article>
-            <article class="card category-card"><div class="category-title"><span class="category-icon waste">♻</span><span>Waste</span><span class="category-menu">···</span></div><strong class="category-value" id="wasteValue">0.0 <small>kg</small></strong><div class="category-foot"><span id="wasteShare">No data yet</span><span class="category-spark waste-spark">⌁</span></div></article>
+            <article class="card category-card"><div class="category-title"><span class="category-icon transport">↗</span><span>Transportation</span><span class="category-menu">···</span></div><strong class="category-value" id="transportValue">0.0 <small>kg CO₂e</small></strong><div class="category-foot"><span id="transportShare">No data yet</span><span class="category-spark transport-spark">⌁</span></div></article>
+            <article class="card category-card"><div class="category-title"><span class="category-icon electricity">ϟ</span><span>Electricity</span><span class="category-menu">···</span></div><strong class="category-value" id="electricityValue">0.0 <small>kg CO₂e</small></strong><div class="category-foot"><span id="electricityShare">No data yet</span><span class="category-spark electricity-spark">⌁</span></div></article>
+            <article class="card category-card"><div class="category-title"><span class="category-icon fuel">♨</span><span>Other fuel</span><span class="category-menu">···</span></div><strong class="category-value" id="fuelValue">0.0 <small>kg CO₂e</small></strong><div class="category-foot"><span id="fuelShare">No data yet</span><span class="category-spark fuel-spark">⌁</span></div></article>
+            <article class="card category-card"><div class="category-title"><span class="category-icon waste">♻</span><span>Waste</span><span class="category-menu">···</span></div><strong class="category-value" id="wasteValue">0.0 <small>kg CO₂e</small></strong><div class="category-foot"><span id="wasteShare">No data yet</span><span class="category-spark waste-spark">⌁</span></div></article>
             <article class="card category-card"><div class="category-title"><span class="category-icon food">✳</span><span>Food</span><span class="category-menu">···</span></div><strong class="category-value" id="foodValue">0.0 <small>kg</small></strong><div class="category-foot"><span id="foodShare">No data yet</span><span class="category-spark food-spark">⌁</span></div></article>
           </div>
         </section>
@@ -165,7 +165,7 @@
             <div class="scanner-review" id="scannerReview" hidden>
               <div class="scanner-review-heading"><strong>Review extracted details</strong><span>Nothing is saved until you choose “Apply to daily log.”</span></div>
               <label class="scanner-kind-label" for="scannerKind">Document type</label>
-              <select id="scannerKind"><option value="electricity">Electricity bill</option><option value="fuel">Fuel receipt</option><option value="food">Grocery / food order</option></select>
+              <select id="scannerKind"><option value="">Choose document type</option><option value="electricity">Electricity bill</option><option value="fuel">Fuel receipt</option><option value="food">Grocery / food order</option></select>
               <div id="scannerFields"></div>
               <div class="scanner-actions"><button class="button button-dark" id="applyScan" type="button">Apply to daily log <span>→</span></button><button class="text-button" id="discardScan" type="button">Discard scan</button></div>
               <details class="scanner-ocr-details"><summary>Check recognized text</summary><textarea id="scannerOcrText" rows="5" readonly aria-label="Recognized text from selected image"></textarea></details>

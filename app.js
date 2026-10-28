@@ -38,10 +38,10 @@
     waste: "Waste"
   };
   const CATEGORY_COLORS = {
-    transport: "#8fc89a",
-    electricity: "#e6b45e",
-    fuel: "#d79568",
-    waste: "#aaa1d2"
+    transport: "#36c99a",
+    electricity: "#f2bd55",
+    fuel: "#ff896e",
+    waste: "#a995f5"
   };
   const ICONS = { transport: "↗", electricity: "ϟ", fuel: "♨", waste: "♻" };
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -63,6 +63,9 @@
   });
   let state = loadState();
   let chart = null;
+  let categoryChart = null;
+  let tesseractLoad = null;
+  let receiptOcrText = "";
   let toastTimer;
   const cloud = {
     apiAvailable: false,
@@ -253,7 +256,6 @@
         ? "Log activity last month for a comparison."
         : "Log activity this month to compare.");
     }
-    setValue("targetDaily", values.target !== null ? `${kg(values.target)} kg / day` : "Set a target");
     $("#todayPill").textContent = todayISO() === (state.records.at(-1) || {}).date ? "UPDATED TODAY" : "MEASURED";
     const goal = state.goal;
     if (!goal) {
@@ -291,9 +293,120 @@
     const stats = statsFor(selectedRecords());
     const total = stats.total;
     for (const key of Object.keys(CATEGORY_LABELS)) {
-      setValue(`${key}Value`, `${kg(stats.categories[key])} kg`);
+      setValue(`${key}Value`, `${kg(stats.categories[key])} kg CO₂e`);
       setValue(`${key}Share`, total ? `${Math.round(stats.categories[key] / total * 100)}% of selected period` : "No data yet");
     }
+    const canvas = $("#categoryChart");
+    const empty = $("#categoryChartEmpty");
+    const legend = $("#categoryMixLegend");
+    setValue("categoryMixTotal", kg(total));
+    if (categoryChart) {
+      categoryChart.destroy();
+      categoryChart = null;
+    }
+    canvas.hidden = false;
+    canvas.parentElement.classList.remove("is-placeholder");
+    if (!stats.days || !total) {
+      if (window.Chart) {
+        canvas.hidden = true;
+        canvas.parentElement.classList.add("is-placeholder");
+        canvas.setAttribute("aria-label", "Pie chart placeholder. Log activity to see your emissions mix.");
+        empty.hidden = true;
+        legend.innerHTML = '<p class="mix-empty-copy">Log activity to see your emissions mix.</p>';
+      } else {
+        empty.textContent = "The chart library could not load; your category totals are still available.";
+        empty.hidden = false;
+        legend.innerHTML = "";
+      }
+      return;
+    }
+    if (!window.Chart) {
+      empty.textContent = "The chart library could not load; your category totals are still available.";
+      empty.hidden = false;
+      legend.innerHTML = "";
+      return;
+    }
+    const keys = Object.keys(CATEGORY_LABELS);
+    const values = keys.map(key => stats.categories[key]);
+    const contributingKeys = keys.filter(key => stats.categories[key] > 0);
+    const pieSliceLabels = {
+      transport: ["Transport"],
+      electricity: ["Electricity"],
+      fuel: ["Other fuel"],
+      waste: ["Waste"]
+    };
+    const categorySliceLabels = {
+      id: "categorySliceLabels",
+      afterDatasetsDraw(chartInstance) {
+        const context = chartInstance.ctx;
+        const arcs = chartInstance.getDatasetMeta(0).data;
+        arcs.forEach((arc, index) => {
+          const { x, y, startAngle, endAngle, outerRadius } = arc.getProps(
+            ["x", "y", "startAngle", "endAngle", "outerRadius"],
+            true
+          );
+          const lines = pieSliceLabels[contributingKeys[index]];
+          const midAngle = (startAngle + endAngle) / 2;
+          const labelRadius = outerRadius * 0.62;
+          const availableWidth = 2 * labelRadius * Math.sin((endAngle - startAngle) / 2);
+          const fontSize = Math.min(9, Math.max(7, outerRadius * 0.12));
+          context.font = `700 ${fontSize}px "DM Sans", sans-serif`;
+          const widestLine = Math.max(...lines.map(line => context.measureText(line).width));
+          if (availableWidth < widestLine + 6) return;
+          context.save();
+          context.translate(
+            x + Math.cos(midAngle) * labelRadius,
+            y + Math.sin(midAngle) * labelRadius
+          );
+          context.textAlign = "center";
+          context.textBaseline = "middle";
+          context.lineJoin = "round";
+          context.lineWidth = 2.5;
+          context.strokeStyle = "rgba(25, 38, 29, .42)";
+          context.fillStyle = "#fff";
+          lines.forEach((line, lineIndex) => {
+            const lineY = (lineIndex - (lines.length - 1) / 2) * (fontSize + 1);
+            context.strokeText(line, 0, lineY);
+            context.fillText(line, 0, lineY);
+          });
+          context.restore();
+        });
+      }
+    };
+    canvas.setAttribute("aria-label", "Emissions by category pie chart");
+    categoryChart = new Chart(canvas, {
+      type: "pie",
+      data: {
+        labels: contributingKeys.map(key => CATEGORY_LABELS[key]),
+        datasets: [{
+          data: contributingKeys.map(key => stats.categories[key]),
+          backgroundColor: contributingKeys.map(key => CATEGORY_COLORS[key]),
+          borderColor: getComputedStyle(document.documentElement).getPropertyValue("--white").trim(),
+          borderWidth: 3,
+          hoverOffset: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: context => `${context.label}: ${kg(context.parsed, 2)} kg CO₂e (${Math.round(context.parsed / total * 100)}%)`
+            }
+          }
+        }
+      },
+      plugins: [categorySliceLabels]
+    });
+    empty.hidden = true;
+    legend.innerHTML = keys.map((key, index) => `
+      <div class="mix-legend-row">
+        <span class="mix-legend-label"><i style="background:${CATEGORY_COLORS[key]}"></i>${CATEGORY_LABELS[key]}</span>
+        <strong>${Math.round(values[index] / total * 100)}%</strong>
+      </div>
+    `).join("");
   }
   function renderTrend() {
     const records = sortedRecords();
@@ -1071,8 +1184,179 @@
     }
   }
 
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    if (tesseractLoad) return tesseractLoad;
+    tesseractLoad = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+      script.onload = () => window.Tesseract
+        ? resolve(window.Tesseract)
+        : reject(new Error("The browser OCR library did not initialize."));
+      script.onerror = () => reject(new Error("Could not load browser OCR. Check your connection and try again."));
+      document.head.append(script);
+    }).catch(error => {
+      tesseractLoad = null;
+      throw error;
+    });
+    return tesseractLoad;
+  }
+  function readReceiptAmount(text, kind) {
+    const number = String.raw`([\d,]+(?:\.\d+)?)`;
+    const matches = kind === "electricity"
+      ? [...text.matchAll(new RegExp(String.raw`(?:units?\s*(?:consumed|used|billed)|electricity\s*(?:consumed|used)|energy\s*consumed)\s*[:#=-]?\s*${number}|${number}\s*kwh\b`, "gi"))]
+      : [...text.split(/\r?\n/).flatMap(line => {
+        if (!/\b(?:fuel|petrol|gasoline|diesel)\b/i.test(line)) return [];
+        return [...line.matchAll(new RegExp(String.raw`${number}\s*(?:l|litres?|liters?|ltrs?|ltr)\b`, "gi"))];
+      })];
+    const amounts = [...new Set(matches.flatMap(match => match.slice(1)
+      .filter(value => value !== undefined)
+      .map(value => Number(value.replace(/,/g, ""))))
+      .filter(value => Number.isFinite(value) && value > 0))];
+    return amounts.length === 1 ? amounts[0] : null;
+  }
+  function renderReceiptFields() {
+    const kind = $("#scannerKind").value;
+    const amount = readReceiptAmount(receiptOcrText, kind);
+    if (kind === "electricity") {
+      $("#scannerFields").innerHTML = `
+        <div class="scanner-field-grid">
+          <label>Bill-period usage <span>kWh · check against bill</span><input id="scanElectricity" type="number" min="0.1" max="5000" step="0.1" value="${amount ?? ""}" placeholder="Enter bill usage"></label>
+          <label>Billing period <span>days · enter from bill</span><input id="scanBillingDays" type="number" min="1" max="365" step="1" placeholder="Enter billing days"></label>
+        </div>
+        <p class="scanner-estimate" id="scannerEstimate">Enter and confirm bill usage and billing days to calculate the daily average.</p>`;
+      const update = () => {
+        const kwh = Number($("#scanElectricity").value);
+        const days = Number($("#scanBillingDays").value);
+        $("#scannerEstimate").textContent = kwh > 0 && kwh <= 5000 && Number.isInteger(days) && days >= 1 && days <= 365
+          ? `Daily average: ${kg(kwh / days, 2)} kWh/day. Confirm the amount and period against the bill.`
+          : "Enter and confirm bill usage and billing days to calculate the daily average.";
+      };
+      $("#scanElectricity").addEventListener("input", update);
+      $("#scanBillingDays").addEventListener("input", update);
+    } else if (kind === "fuel") {
+      $("#scannerFields").innerHTML = `
+        <div class="scanner-field-grid">
+          <label>Fuel purchased <span>litres · check against receipt</span><input id="scanFuelLitres" type="number" min="0.01" max="500" step="0.01" value="${amount ?? ""}" placeholder="Enter receipt amount"></label>
+          <label>Fuel type <span>confirm from receipt</span><select id="scanVehicleFuel"><option value="">Choose fuel type</option><option value="petrol">Petrol</option><option value="diesel">Diesel</option></select></label>
+          <label>Vehicle efficiency <span>km per litre · enter your value</span><input id="scanKmPerLitre" type="number" min="1" max="100" step="0.1" placeholder="Enter km/L"></label>
+          <label>Days represented <span>days · enter your value</span><input id="scanFuelDays" type="number" min="1" max="30" step="1" placeholder="Enter days"></label>
+        </div>
+        <p class="scanner-estimate" id="scannerEstimate">Enter and confirm fuel type, efficiency, and days to estimate daily distance.</p>`;
+      const update = () => {
+        const litres = Number($("#scanFuelLitres").value);
+        const efficiency = Number($("#scanKmPerLitre").value);
+        const days = Number($("#scanFuelDays").value);
+        $("#scannerEstimate").textContent = litres > 0 && litres <= 500 && ["petrol", "diesel"].includes($("#scanVehicleFuel").value)
+          && efficiency >= 1 && efficiency <= 100 && Number.isInteger(days) && days >= 1 && days <= 30
+          ? `Estimated distance: ${kg(litres * efficiency / days, 1)} km/day across ${days} days. This purchase-based estimate is not measured travel.`
+          : "Enter and confirm fuel type, efficiency, and days to estimate daily distance.";
+      };
+      ["#scanFuelLitres", "#scanKmPerLitre", "#scanFuelDays", "#scanVehicleFuel"].forEach(selector => {
+        $(selector).addEventListener("input", update);
+        $(selector).addEventListener("change", update);
+      });
+    } else {
+      $("#scannerFields").innerHTML = '<p class="scanner-estimate">Choose whether this is an electricity bill or fuel receipt.</p>';
+      return;
+    }
+    $("#scannerFields").querySelectorAll("input, select").forEach(input => {
+      input.addEventListener("input", renderCalculationPreview);
+    });
+  }
+  async function processReceiptImage(file) {
+    if (!file || !["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      $("#receiptImage").value = "";
+      showToast("Choose a PNG, JPG, or WebP image.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      $("#receiptImage").value = "";
+      showToast("Choose an image smaller than 10 MB.");
+      return;
+    }
+    $("#receiptImage").value = "";
+    $("#scannerReview").hidden = true;
+    $("#scannerProgress").hidden = false;
+    $("#scannerProgress").textContent = "Loading browser OCR… Your image stays on this device.";
+    let worker;
+    try {
+      const tesseract = await loadTesseract();
+      worker = await tesseract.createWorker("eng", 1, {
+        logger: message => {
+          if (message.status === "recognizing text") {
+            $("#scannerProgress").textContent = `Reading image… ${Math.round(message.progress * 100)}%`;
+          }
+        }
+      });
+      const result = await worker.recognize(file);
+      receiptOcrText = result.data.text || "";
+      if (!receiptOcrText.trim()) throw new Error("No readable text was found. Try a sharper, well-lit image.");
+      $("#scannerOcrText").value = receiptOcrText;
+      $("#scannerFileName").textContent = `${file.name} · recognized in your browser`;
+      $("#scannerReview").hidden = false;
+      renderReceiptFields();
+      $("#scannerProgress").textContent = "Image read. Review the extracted values and enter any missing details.";
+      $("#scannerReview").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (error) {
+      console.error("Receipt OCR failed.", error);
+      $("#scannerProgress").textContent = error.message || "Could not read the image. Try another image.";
+      showToast(error.message || "Could not read the image. Try another image.");
+    } finally {
+      if (worker) await worker.terminate();
+    }
+  }
+  function applyReceiptScan() {
+    const kind = $("#scannerKind").value;
+    if (kind === "electricity") {
+      const kwh = Number($("#scanElectricity").value);
+      const days = Number($("#scanBillingDays").value);
+      if (!(kwh > 0 && kwh <= 5000 && Number.isInteger(days) && days >= 1 && days <= 365)) {
+        showToast("Enter and confirm bill usage (up to 5,000 kWh) and billing days (1–365).");
+        return;
+      }
+      $("#electricityKwh").value = (kwh / days).toFixed(2);
+    } else if (kind === "fuel") {
+      const litres = Number($("#scanFuelLitres").value);
+      const efficiency = Number($("#scanKmPerLitre").value);
+      const days = Number($("#scanFuelDays").value);
+      const fuel = $("#scanVehicleFuel").value;
+      if (!(litres > 0 && litres <= 500 && efficiency >= 1 && efficiency <= 100
+        && Number.isInteger(days) && days >= 1 && days <= 30 && ["petrol", "diesel"].includes(fuel))) {
+        showToast("Enter and confirm fuel amount, type, efficiency (1–100 km/L), and days represented (1–30).");
+        return;
+      }
+      $("#vehicleDistance").value = (litres * efficiency / days).toFixed(1);
+      $("#vehicleType").value = "petrolCar";
+      $("#vehicleFuel").value = fuel;
+    } else {
+      showToast("Choose a document type and review the extracted amount first.");
+      return;
+    }
+    renderCalculationPreview();
+    $("#scannerReview").hidden = true;
+    setValue("saveMessage", "Confirmed values applied to the activity form. Review the daily totals and save to add them to your tracker.");
+    document.querySelector("#activityForm").scrollIntoView({ behavior: "smooth", block: "center" });
+    showToast("Confirmed values applied. Review and save your daily activity.");
+  }
+  function discardReceiptScan() {
+    $("#scannerReview").hidden = true;
+    $("#scannerProgress").hidden = true;
+    $("#receiptImage").value = "";
+    $("#scannerFileName").textContent = "PNG, JPG, or WebP · up to 10 MB";
+    $("#scannerOcrText").value = "";
+    $("#scannerFields").innerHTML = "";
+    receiptOcrText = "";
+  }
   function bindEvents() {
     $("#entryDate").value = todayISO();
+    $("#receiptImage").addEventListener("change", event => {
+      const file = event.target.files[0];
+      if (file) processReceiptImage(file);
+    });
+    $("#scannerKind").addEventListener("change", renderReceiptFields);
+    $("#applyScan").addEventListener("click", applyReceiptScan);
+    $("#discardScan").addEventListener("click", discardReceiptScan);
     $("#activityForm").addEventListener("submit", event => {
       event.preventDefault();
       const date = $("#entryDate").value;

@@ -324,7 +324,6 @@
         ? "Log activity last month for a comparison."
         : "Log activity this month to compare.");
     }
-    setValue("targetDaily", values.target !== null ? `${kg(values.target)} kg / day` : "Set a target");
     $("#todayPill").textContent = todayISO() === (state.records.at(-1) || {}).date ? "UPDATED TODAY" : "MEASURED";
     const goal = state.goal;
     if (!goal) {
@@ -362,7 +361,7 @@
     const stats = statsFor(selectedRecords());
     const total = stats.total;
     for (const key of Object.keys(CATEGORY_LABELS)) {
-      setValue(`${key}Value`, `${kg(stats.categories[key])} kg`);
+      setValue(`${key}Value`, `${kg(stats.categories[key])} kg CO₂e`);
       setValue(`${key}Share`, total ? `${Math.round(stats.categories[key] / total * 100)}% of selected period` : "No data yet");
     }
   }
@@ -890,22 +889,33 @@
     }));
   }
   function scanReceiptText(text) {
-    const electricityMatch = text.match(/(?:units?\s*(?:consumed|used|billed)?|consumption|energy\s*consumed|total\s*units)\s*[:#=-]?\s*([\d,]+(?:\.\d+)?)/i)
-      || text.match(/([\d,]+(?:\.\d+)?)\s*kwh\b/i);
-    const fuelMatch = text.match(/([\d,]+(?:\.\d+)?)\s*(?:litres?|liters?|ltrs?|ltr)\b/i)
-      || text.match(/(?:qty|quantity|volume)\s*[:#=-]?\s*([\d,]+(?:\.\d+)?)/i);
-    const kind = /(?:electricity|kwh|units?\s*(?:consumed|billed))/i.test(text)
-      ? "electricity"
-      : /(?:petrol|gasoline|diesel|fuel|pump)/i.test(text)
-        ? "fuel"
-        : "food";
+    const numberPattern = String.raw`([\d,]+(?:\.\d+)?)`;
+    const electricityMatches = [
+      ...text.matchAll(new RegExp(String.raw`(?:units?\s*(?:consumed|used|billed)|electricity\s*(?:consumed|used)|energy\s*consumed)\s*[:#=-]?\s*${numberPattern}`, "gi")),
+      ...text.matchAll(new RegExp(String.raw`${numberPattern}\s*kwh\b`, "gi"))
+    ];
+    const fuelMatches = text.split(/\r?\n/).flatMap(line => {
+      if (!/\b(?:fuel|petrol|gasoline|diesel)\b/i.test(line)) return [];
+      return [...line.matchAll(new RegExp(String.raw`${numberPattern}\s*(?:l|litres?|liters?|ltrs?|ltr)\b`, "gi"))];
+    });
+    const readUniqueAmount = matches => {
+      const amounts = [...new Set(matches
+          .flatMap(match => match.slice(1).filter(value => value !== undefined).map(value => Number(value.replace(/,/g, ""))))
+        .filter(value => Number.isFinite(value) && value > 0))];
+      return amounts.length === 1 ? amounts[0] : 0;
+    };
+    const hasElectricityContext = /\b(?:electricity|kwh|units?\s+(?:consumed|used|billed))\b/i.test(text);
+    const hasFuelContext = /\b(?:petrol|gasoline|diesel|fuel|fuel pump)\b/i.test(text);
+    const kind = hasElectricityContext === hasFuelContext ? "" : hasElectricityContext ? "electricity" : "fuel";
     const mealLines = scanFoodLines(text);
+    const hasPetrol = /\b(?:petrol|gasoline)\b/i.test(text);
+    const hasDiesel = /\bdiesel\b/i.test(text);
     return {
       kind,
-      electricityKwh: electricityMatch ? numberFromText(electricityMatch[1]) : 0,
-      fuelLitres: fuelMatch ? numberFromText(fuelMatch[1]) : 0,
-      vehicleFuel: /\b(diesel)\b/i.test(text) ? "diesel" : "petrol",
-      meals: mealLines.length ? mealLines : [{ name: "Unrecognized food item — review type", type: "mixed", servings: 1 }]
+      electricityKwh: readUniqueAmount(electricityMatches),
+      fuelLitres: readUniqueAmount(fuelMatches),
+      vehicleFuel: hasDiesel === hasPetrol ? "" : hasDiesel ? "diesel" : "petrol",
+      meals: mealLines
     };
   }
   function scannerFoodEstimate() {
@@ -922,17 +932,23 @@
   }
   function renderScannerFields(parsed) {
     const kind = $("#scannerKind").value;
+    if (!kind) {
+      $("#scannerFields").innerHTML = '<p class="scanner-estimate">Choose a document type to review its extracted amount.</p>';
+      return;
+    }
     if (kind === "electricity") {
       $("#scannerFields").innerHTML = `
         <div class="scanner-field-grid">
           <label>Bill-period electricity <span>kWh on bill</span><input id="scanElectricity" type="number" min="0" max="5000" step="0.1" value="${parsed.electricityKwh || ""}" placeholder="e.g. 180"></label>
-          <label>Billing period <span>days</span><input id="scanBillingDays" type="number" min="1" max="365" step="1" value="30"></label>
+          <label>Billing period <span>days · enter from bill</span><input id="scanBillingDays" type="number" min="1" max="365" step="1" placeholder="Enter billing days"></label>
         </div>
-        <p class="scanner-estimate" id="scannerElectricityEstimate">Daily average: — kWh/day. Confirm the bill-period usage and days.</p>`;
+        <p class="scanner-estimate" id="scannerElectricityEstimate">Enter and confirm bill-period usage and billing days to calculate the daily average.</p>`;
       const update = () => {
         const kwh = numberFromText($("#scanElectricity").value);
-        const days = Math.max(1, numberFromText($("#scanBillingDays").value));
-        $("#scannerElectricityEstimate").textContent = `Daily average: ${kg(kwh / days, 2)} kWh/day. Confirm the bill-period usage and days.`;
+        const days = numberFromText($("#scanBillingDays").value);
+        $("#scannerElectricityEstimate").textContent = kwh > 0 && kwh <= 5000 && Number.isInteger(days) && days >= 1 && days <= 365
+          ? `Daily average: ${kg(kwh / days, 2)} kWh/day. Confirm the bill-period usage and days.`
+          : "Enter and confirm bill-period usage and billing days to calculate the daily average.";
       };
       $("#scanElectricity").addEventListener("input", update);
       $("#scanBillingDays").addEventListener("input", update);
@@ -943,20 +959,25 @@
       $("#scannerFields").innerHTML = `
         <div class="scanner-field-grid">
           <label>Fuel purchased <span>litres</span><input id="scanFuelLitres" type="number" min="0" max="500" step="0.01" value="${parsed.fuelLitres || ""}" placeholder="e.g. 6.4"></label>
-          <label>Vehicle fuel type<select id="scanVehicleFuel"><option value="petrol">Petrol</option><option value="diesel">Diesel</option></select></label>
-          <label>Vehicle efficiency assumption <span>km per litre</span><input id="scanKmPerLitre" type="number" min="1" max="100" step="0.1" value="15"></label>
-          <label>Days represented <span>days</span><input id="scanFuelDays" type="number" min="1" max="30" step="1" value="7"></label>
+          <label>Vehicle fuel type<select id="scanVehicleFuel"><option value="">Confirm fuel type</option><option value="petrol">Petrol</option><option value="diesel">Diesel</option></select></label>
+          <label>Vehicle efficiency assumption <span>km per litre · enter your value</span><input id="scanKmPerLitre" type="number" min="1" max="100" step="0.1" placeholder="Enter km/L"></label>
+          <label>Days represented <span>days · enter your value</span><input id="scanFuelDays" type="number" min="1" max="30" step="1" placeholder="Enter days"></label>
         </div>
-        <p class="scanner-estimate" id="scannerFuelEstimate">Estimated average distance: — km/day. This is a purchase-based proxy, not measured distance.</p>`;
-      $("#scanVehicleFuel").value = parsed.vehicleFuel;
+        <p class="scanner-estimate" id="scannerFuelEstimate">Enter and confirm fuel type, vehicle efficiency, and days represented to estimate daily distance.</p>`;
+      $("#scanVehicleFuel").value = parsed.vehicleFuel || "";
       const update = () => {
-        const km = numberFromText($("#scanFuelLitres").value) * numberFromText($("#scanKmPerLitre").value);
-        const days = Math.max(1, numberFromText($("#scanFuelDays").value));
-        $("#scannerFuelEstimate").textContent = `Estimated average distance: ${kg(km / days, 1)} km/day across ${days} days. This purchase-based proxy uses your efficiency assumption; adjust it to match your vehicle.`;
+        const litres = numberFromText($("#scanFuelLitres").value);
+        const efficiency = numberFromText($("#scanKmPerLitre").value);
+        const days = numberFromText($("#scanFuelDays").value);
+        $("#scannerFuelEstimate").textContent = litres > 0 && litres <= 500 && ["petrol", "diesel"].includes($("#scanVehicleFuel").value)
+          && efficiency >= 1 && efficiency <= 100 && Number.isInteger(days) && days >= 1 && days <= 30
+          ? `Estimated average distance: ${kg(litres * efficiency / days, 1)} km/day across ${days} days. This purchase-based proxy uses your confirmed efficiency; it is not measured distance.`
+          : "Enter and confirm fuel type, vehicle efficiency, and days represented to estimate daily distance.";
       };
       $("#scanFuelLitres").addEventListener("input", update);
       $("#scanKmPerLitre").addEventListener("input", update);
       $("#scanFuelDays").addEventListener("input", update);
+      $("#scanVehicleFuel").addEventListener("change", update);
       update();
       return;
     }
@@ -1018,12 +1039,13 @@
       scannerText = result.data.text || "";
       if (!scannerText.trim()) throw new Error("No readable text was found. Try a sharper, well-lit image.");
       const parsed = scanReceiptText(scannerText);
-      $("#scannerKind").value = parsed.kind;
+      $("#scannerKind").value = parsed.kind || "";
       $("#scannerOcrText").value = scannerText;
       $("#scannerFileName").textContent = `${file.name} · recognized in your browser`;
       $("#scannerReview").hidden = false;
       renderScannerFields(parsed);
       $("#scannerProgress").textContent = "Image read. Review the extracted values before applying them.";
+      if (!parsed.kind) $("#scannerProgress").textContent = "Choose the document type and review the extracted values.";
       $("#scannerReview").scrollIntoView({ behavior: "smooth", block: "nearest" });
     } catch (error) {
       console.error("Receipt OCR failed.", error);
@@ -1035,10 +1057,14 @@
   }
   function applyReceiptScan() {
     const kind = $("#scannerKind").value;
+    if (!["electricity", "fuel", "food"].includes(kind)) {
+      showToast("Choose a document type and review the extracted amount first.");
+      return;
+    }
     if (kind === "electricity") {
       const kwh = numberFromText($("#scanElectricity").value);
       const days = numberFromText($("#scanBillingDays").value);
-      if (kwh <= 0 || kwh > 5000 || days < 1 || days > 365) {
+      if (kwh <= 0 || kwh > 5000 || !Number.isInteger(days) || days < 1 || days > 365) {
         showToast("Check bill kWh (up to 5,000) and billing days (1–365).");
         return;
       }
@@ -1047,7 +1073,8 @@
       const litres = numberFromText($("#scanFuelLitres").value);
       const efficiency = numberFromText($("#scanKmPerLitre").value);
       const days = numberFromText($("#scanFuelDays").value);
-      if (litres <= 0 || litres > 500 || efficiency < 1 || efficiency > 100 || days < 1 || days > 30) {
+      if (litres <= 0 || litres > 500 || !["petrol", "diesel"].includes($("#scanVehicleFuel").value)
+        || efficiency < 1 || efficiency > 100 || !Number.isInteger(days) || days < 1 || days > 30) {
         showToast("Check fuel quantity (up to 500 L), efficiency (1–100 km/L), and days represented (1–30).");
         return;
       }

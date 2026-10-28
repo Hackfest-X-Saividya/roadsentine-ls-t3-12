@@ -134,7 +134,7 @@ h1 { margin-bottom: 8px; font: 700 28px/1.26 Manrope, sans-serif; letter-spacing
 .summary-change.down { color: #28774c; background: #e9f4eb; }
 .summary-change.up { color: #986316; background: #fff3dc; }
 .summary-change.neutral { color: #68746b; background: #f0f3f0; }
-.footprint-footer { display: flex; align-items: center; justify-content: space-between; color: #849087; font-size: 11px; }
+.footprint-footer { display: flex; align-items: center; justify-content: flex-end; color: #849087; font-size: 11px; }
 .footprint-footer strong { margin-left: 4px; color: #47574c; font-size: 12px; }
 .text-button { padding: 4px 0; border: 0; color: var(--green); background: transparent; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .text-button:hover { color: #174e31; }

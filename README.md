@@ -7,6 +7,7 @@ The original browser-only mode remains available. Run the optional Flask service
 ## What it does
 
 - Records one daily activity entry per date; saving the same date updates that entry.
+- Optionally reads electricity-bill and fuel-receipt images in the browser. Review OCR values, supply missing billing-period or vehicle assumptions yourself, and confirm before applying; images are not uploaded or saved.
 - Calculates transportation, electricity, non-transport fuel, and waste emissions from transparent, editable factors.
 - Shows daily, weekly, and monthly average trends, category totals, a recent-source breakdown, and a dated activity history.
 - Creates deterministic, personalized actions from the saved activity and profile, with explicitly estimated weekly savings, rationale, impact, cost, and difficulty. Budget, transit availability, location, and optional lifestyle/preferences notes affect recommendation ranking or context, never the numerical factors.
@@ -16,7 +17,7 @@ The original browser-only mode remains available. Run the optional Flask service
 - Compares single-category what-if scenarios using the same factors as the calculator and offers a 30-day, non-streak-based logging challenge.
 - Provides optional Flask REST APIs, Supabase Auth/PostgreSQL persistence with per-user RLS, and optional backend-only Anthropic explanations.
 
-Chart.js is loaded from jsDelivr for the interactive trend chart. The rest of the app works without it, though the chart will not render when that library cannot be reached.
+Chart.js is loaded from jsDelivr for the interactive footprint-trend chart and the category pie chart in “Where it adds up.” The rest of the app works without it, though those charts will not render when the library cannot be reached.
 
 ## Calculation method
 
