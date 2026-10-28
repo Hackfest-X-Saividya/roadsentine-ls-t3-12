@@ -28,6 +28,12 @@ function notify(message, error = false) {
   clearTimeout(notify.timeout);
   notify.timeout = setTimeout(() => { node.hidden = true; }, 4800);
 }
+function setLoading(loading, message = "Loading your saved activities…") {
+  const state = document.getElementById("loadingState");
+  state.hidden = !loading;
+  state.setAttribute("aria-busy", String(loading));
+  document.getElementById("loadingMessage").textContent = message;
+}
 function number(value, digits = 2) {
   return Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: digits });
 }
@@ -170,7 +176,7 @@ async function loadProgress() {
   document.getElementById("progressPercent").textContent = data.percentage_change === null ? "No previous activity baseline" : `${up ? "+" : ""}${number(data.percentage_change)}% vs previous equal-length period`;
   document.getElementById("progressEstimated").textContent = number(data.estimated_action_savings_kg_co2e);
   document.getElementById("progressInterpretation").textContent = data.interpretation;
-  document.getElementById("progressTarget").innerHTML = data.target ? `Target: reduce ${data.target.reduction_percentage}% from ${number(data.target.baseline_kg_co2e)} kg CO₂e to ${number(data.target.target_kg_co2e)} kg. Latest rolling 30-day estimate: ${number(data.target.latest_30_day_kg_co2e)} kg, with ${number(data.target.remaining_gap_kg_co2e)} kg remaining. ${number(data.target.progress_percentage, 0)}% progress toward the target calculation.` : "No target set. Set one in the Reduction planner when you are ready.";
+  document.getElementById("progressTarget").innerHTML = data.target ? `Target: reduce ${data.target.reduction_percentage}% from ${number(data.target.baseline_kg_co2e)} kg CO₂e to ${number(data.target.target_kg_co2e)} kg. Latest ${data.target.measurement_period_days}-day estimate: ${number(data.target.latest_period_kg_co2e)} kg, with ${number(data.target.remaining_gap_kg_co2e)} kg remaining. ${number(data.target.progress_percentage, 0)}% progress toward the target calculation.` : "No target set. Set one in the Reduction planner when you are ready.";
   document.getElementById("progressActions").innerHTML = data.completed_actions.length ? data.completed_actions.map(completedMarkup).join("") : '<div class="empty-state">Completed actions will appear here.</div>';
 }
 async function loadAdvisor() {
@@ -185,6 +191,7 @@ async function loadFactors() {
   document.getElementById("factorAssumptions").textContent = factorInfo.assumptions;
 }
 async function loadAll() {
+  setLoading(true, "Loading your saved activities…");
   try {
     activities = await api("/api/activities");
     renderActivities();
@@ -193,11 +200,17 @@ async function loadAll() {
     await loadAdvisor();
     await loadProgress();
     await refreshSimulator();
-    document.getElementById("serviceStatus").textContent = "Local-only · private on this device";
+    document.getElementById("serviceStatus").textContent = cloudReachable
+      ? "Local-first · cloud backup available"
+      : "Local-only · private on this device";
   } catch (error) {
     notify(`Could not load your data: ${error.message}`, true);
     document.getElementById("serviceStatus").textContent = "Local service unavailable";
+    return false;
+  } finally {
+    setLoading(false);
   }
+  return true;
 }
 async function refreshSimulator() {
   const reduction = Number(document.getElementById("simulationSlider").value);
@@ -292,6 +305,9 @@ function bindEvents() {
   document.getElementById("activityForm").addEventListener("submit", async event => {
     event.preventDefault();
     const id = document.getElementById("editId").value;
+    const saveButton = document.getElementById("saveActivity");
+    saveButton.disabled = true;
+    saveButton.textContent = id ? "Saving…" : "Adding…";
     try {
       const saved = await api(id ? `/api/activities/${id}` : "/api/activities", { method: id ? "PUT" : "POST", body: JSON.stringify(activityPayload()) });
       clearActivityForm();
@@ -301,6 +317,9 @@ function bindEvents() {
     } catch (error) {
       document.getElementById("formMessage").textContent = error.message;
       notify(error.message, true);
+    } finally {
+      saveButton.disabled = false;
+      saveButton.textContent = document.getElementById("editId").value ? "Save changes" : "Save activity";
     }
   });
   document.getElementById("cancelEdit").addEventListener("click", clearActivityForm);
@@ -308,11 +327,15 @@ function bindEvents() {
   document.getElementById("progressDays").addEventListener("change", () => loadProgress().catch(error => notify(error.message, true)));
   document.getElementById("targetForm").addEventListener("submit", async event => {
     event.preventDefault();
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    submit.textContent = "Saving…";
     try {
       await api("/api/targets", { method: "POST", body: JSON.stringify({ reduction_percentage: Number(document.getElementById("targetReduction").value), duration_days: Number(document.getElementById("targetDuration").value) }) });
       await loadAll();
       notify("Your target has been saved.");
     } catch (error) { notify(error.message, true); }
+    finally { submit.disabled = false; submit.textContent = "Set my target"; }
   });
   document.getElementById("simulationSlider").addEventListener("input", () => refreshSimulator().catch(error => notify(error.message, true)));
   document.getElementById("advisorForm").addEventListener("submit", async event => {
@@ -336,7 +359,15 @@ function bindEvents() {
     }
   });
   document.getElementById("mobileMenu").addEventListener("click", () => document.querySelector(".sidebar").classList.toggle("open"));
-  document.getElementById("refreshButton").addEventListener("click", () => loadAll().then(() => notify("Your dashboard is up to date.")).catch(error => notify(error.message, true)));
+  document.getElementById("refreshButton").addEventListener("click", async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      if (await loadAll()) notify("Your dashboard is up to date.");
+    } finally {
+      button.disabled = false;
+    }
+  });
   document.getElementById("cloudButton").addEventListener("click", () => {
     renderCloudAccount();
     document.getElementById("cloudDialog").showModal();
@@ -353,6 +384,9 @@ function bindEvents() {
   });
   document.getElementById("cloudBackup").addEventListener("click", async () => {
     const message = document.getElementById("cloudBackupMessage");
+    const backupButton = document.getElementById("cloudBackup");
+    backupButton.disabled = true;
+    backupButton.textContent = "Backing up…";
     message.textContent = "Backing up…";
     message.classList.remove("error");
     try {
@@ -366,6 +400,9 @@ function bindEvents() {
     } catch (error) {
       message.textContent = error.message;
       message.classList.add("error");
+    } finally {
+      backupButton.disabled = false;
+      backupButton.textContent = "Back up local data";
     }
   });
 }
@@ -379,6 +416,9 @@ function renderCloudAccount() {
 }
 async function authenticateCloud(endpoint) {
   const message = document.getElementById("cloudAuthMessage");
+  const buttons = [...document.querySelectorAll("#cloudAuthForm button")];
+  const labels = buttons.map(button => button.textContent);
+  buttons.forEach(button => { button.disabled = true; });
   message.textContent = "Contacting your configured Supabase Auth service…";
   message.classList.remove("error");
   try {
@@ -400,6 +440,11 @@ async function authenticateCloud(endpoint) {
   } catch (error) {
     message.textContent = error.message;
     message.classList.add("error");
+  } finally {
+    buttons.forEach((button, index) => {
+      button.disabled = false;
+      button.textContent = labels[index];
+    });
   }
 }
 document.addEventListener("DOMContentLoaded", async () => {

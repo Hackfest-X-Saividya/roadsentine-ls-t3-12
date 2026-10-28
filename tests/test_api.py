@@ -40,6 +40,21 @@ class ApiTests(unittest.TestCase):
         self.assertFalse(response.json["aiEnabled"])
         self.assertFalse(response.json["cloudReachable"])
 
+    def test_flask_serves_frontend_from_same_origin_as_api(self):
+        page = self.client.get("/")
+        try:
+            self.assertEqual(page.status_code, 200)
+            self.assertIn(b"Carbon Copilot", page.data)
+            self.assertIn(b"/static/app.js", page.data)
+        finally:
+            page.close()
+        for asset_path in ("/static/app.js", "/static/styles.css"):
+            asset = self.client.get(asset_path)
+            try:
+                self.assertEqual(asset.status_code, 200)
+            finally:
+                asset.close()
+
     def test_activity_crud_dashboard_and_period_validation(self):
         created = self.create_activity()
         self.assertEqual(created.status_code, 201)
@@ -105,6 +120,8 @@ class ApiTests(unittest.TestCase):
         })
         self.assertEqual(target.status_code, 201)
         self.assertEqual(target.json["target_kg_co2e"], 1.536)
+        self.assertEqual(target.json["latest_period_kg_co2e"], 1.92)
+        self.assertEqual(target.json["measurement_period_days"], 30)
         simulation = self.client.post("/api/simulate", json={"reduction_percentage": 25})
         self.assertEqual(simulation.json["estimated_savings_kg_co2e"], 0.48)
         completed = self.client.post("/api/actions/transit/complete")
