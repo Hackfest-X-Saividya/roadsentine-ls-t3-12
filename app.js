@@ -38,10 +38,10 @@
     waste: "Waste"
   };
   const CATEGORY_COLORS = {
-    transport: "#57936a",
-    electricity: "#d8a550",
-    fuel: "#db9660",
-    waste: "#8884b7"
+    transport: "#8fc89a",
+    electricity: "#e6b45e",
+    fuel: "#d79568",
+    waste: "#aaa1d2"
   };
   const ICONS = { transport: "↗", electricity: "ϟ", fuel: "♨", waste: "♻" };
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -219,23 +219,41 @@
     const latest = latestStats();
     const baseline = baselineStats();
     const values = goalValues();
-    setValue("currentFootprint", latest.days ? kg(latest.average) : "0.0");
+    setValue("currentFootprint", latest.days ? kg(latest.total) : "0.0");
     setValue("footprintPeriod", latest.days
-      ? `Average per recorded day · ${hasPostBaselineData() ? "since baseline" : "baseline period"}`
-      : "Average per recorded day · last 7 days");
-    setValue("targetDaily", values.target !== null ? `${kg(values.target)} kg / day` : "Set a target");
+      ? `Across the latest ${latest.days} recorded ${latest.days === 1 ? "day" : "days"}`
+      : "Log activity to see your total footprint");
+    $("#footprintEmpty").hidden = latest.days > 0;
+    const largest = Object.entries(latest.categories).sort((a, b) => b[1] - a[1])[0];
+    setValue("largestSource", latest.total && largest ? CATEGORY_LABELS[largest[0]] : latest.days ? "No emissions" : "—");
+    setValue("largestSourceAmount", latest.total && largest
+      ? `${kg(largest[1])} kg CO₂e across this period`
+      : latest.days ? "Your recorded activity is at zero." : "Log activity to see your largest source.");
+
+    const currentMonth = todayISO().slice(0, 7);
+    const previousMonthDate = new Date(`${currentMonth}-01T12:00:00`);
+    previousMonthDate.setMonth(previousMonthDate.getMonth() - 1);
+    const previousMonth = `${previousMonthDate.getFullYear()}-${String(previousMonthDate.getMonth() + 1).padStart(2, "0")}`;
+    const currentMonthStats = statsFor(state.records.filter(record => record.date.startsWith(currentMonth)));
+    const previousMonthStats = statsFor(state.records.filter(record => record.date.startsWith(previousMonth)));
     const badge = $("#changeBadge");
-    if (latest.days && hasPostBaselineData()) {
-      const change = latest.average - baseline.average;
-      const percent = baseline.average ? Math.abs(change / baseline.average * 100) : 0;
-      badge.className = `delta-badge ${change < 0 ? "down" : change > 0 ? "up" : "neutral"}`;
-      badge.textContent = `${change < 0 ? "↓" : change > 0 ? "↑" : "→"} ${percent.toFixed(0)}%`;
-      setValue("changeCaption", `${latest.days} later recorded ${latest.days === 1 ? "day" : "days"} vs. baseline`);
+    if (currentMonthStats.days && previousMonthStats.days && previousMonthStats.average > 0) {
+      const change = (currentMonthStats.average - previousMonthStats.average) / previousMonthStats.average * 100;
+      badge.className = `summary-change ${change < 0 ? "down" : change > 0 ? "up" : "neutral"}`;
+      badge.textContent = `${change < 0 ? "↓" : change > 0 ? "↑" : "→"} ${Math.abs(change).toFixed(0)}%`;
+      setValue("changeCaption", "vs. last month’s average per recorded day");
+    } else if (currentMonthStats.days && previousMonthStats.days && previousMonthStats.average === 0) {
+      badge.className = `summary-change ${currentMonthStats.average > 0 ? "up" : "neutral"}`;
+      badge.textContent = currentMonthStats.average > 0 ? "New" : "→ 0%";
+      setValue("changeCaption", "Last month had no recorded emissions.");
     } else {
-      badge.className = "delta-badge neutral";
+      badge.className = "summary-change neutral";
       badge.textContent = "—";
-      setValue("changeCaption", "Log activity beyond the first 7 days to measure change");
+      setValue("changeCaption", currentMonthStats.days
+        ? "Log activity last month for a comparison."
+        : "Log activity this month to compare.");
     }
+    setValue("targetDaily", values.target !== null ? `${kg(values.target)} kg / day` : "Set a target");
     $("#todayPill").textContent = todayISO() === (state.records.at(-1) || {}).date ? "UPDATED TODAY" : "MEASURED";
     const goal = state.goal;
     if (!goal) {
@@ -243,7 +261,9 @@
       setValue("targetSummary", "Make a goal that works for you");
       setValue("targetDescription", "Set a target and Carbon Copilot will help you turn it into practical weekly actions.");
       setValue("goalProgressText", "0%");
+      setValue("monthlyGoalText", "Set a goal and log activity to track progress.");
       $("#goalProgressBar").style.width = "0%";
+      $(".target-card .progress-track").setAttribute("aria-valuenow", "0");
       return;
     }
     setValue("targetStatus", values.target === null ? "LOG BASELINE" : "IN PROGRESS");
@@ -256,6 +276,16 @@
       : 0;
     setValue("goalProgressText", `${Math.round(progress)}%`);
     $("#goalProgressBar").style.width = `${progress}%`;
+    $(".target-card .progress-track").setAttribute("aria-valuenow", String(Math.round(progress)));
+    const monthlyTarget = Math.max(0, (values.baseline - values.target) * 30);
+    const monthlyReduction = baseline.days && hasPostBaselineData()
+      ? Math.max(0, (baseline.average - latest.average) * 30)
+      : 0;
+    setValue("monthlyGoalText", values.target === null
+      ? `Log activity beyond the first 7 days to establish progress toward your monthly target.`
+      : !hasPostBaselineData()
+        ? `Your estimated target is ${kg(monthlyTarget)} kg CO₂e/month. Log beyond your baseline to track progress.`
+        : `${kg(Math.min(monthlyReduction, monthlyTarget))} of ${kg(monthlyTarget)} kg CO₂e/month estimated reduction.`);
   }
   function renderCategories() {
     const stats = statsFor(selectedRecords());
@@ -310,8 +340,8 @@
       data: {
         labels: prettyLabels,
         datasets: [
-          { label: "Measured footprint", data: values, borderColor: "#57936a", backgroundColor: "rgba(87,147,106,.12)", borderWidth: 2, pointRadius: values.length > 14 ? 1 : 3, pointHoverRadius: 5, tension: .35, fill: true },
-          ...(goal.target !== null ? [{ label: "Target daily average", data: labels.map(() => goal.target), borderColor: "#bdc5bd", borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false }] : [])
+          { label: "Measured footprint", data: values, borderColor: "#9bcf9c", backgroundColor: "rgba(123,181,128,.16)", borderWidth: 2, pointRadius: values.length > 14 ? 1 : 3, pointHoverRadius: 5, tension: .35, fill: true },
+          ...(goal.target !== null ? [{ label: "Target daily average", data: labels.map(() => goal.target), borderColor: "#d4ae69", borderWidth: 1, borderDash: [4, 4], pointRadius: 0, fill: false }] : [])
         ]
       },
       options: {
@@ -319,8 +349,8 @@
         interaction: { intersect: false, mode: "index" },
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${kg(context.parsed.y, 2)} kg CO₂e` } } },
         scales: {
-          x: { grid: { display: false }, ticks: { color: "#98a29a", maxTicksLimit: 7, font: { size: 8 } }, border: { display: false } },
-          y: { beginAtZero: true, grid: { color: "#f0f2ef" }, ticks: { color: "#a1aaa2", font: { size: 8 }, callback: value => `${value} kg` }, border: { display: false } }
+          x: { grid: { display: false }, ticks: { color: "#a0ada1", maxTicksLimit: 7, font: { size: 10 } }, border: { display: false } },
+          y: { beginAtZero: true, grid: { color: "rgba(178,195,178,.12)" }, ticks: { color: "#a0ada1", font: { size: 10 }, callback: value => `${value} kg` }, border: { display: false } }
         }
       }
     });
@@ -386,7 +416,7 @@
       const weightedRailFactor = fossilRailEmissions / fossilCarKm;
       add({
         id: "transit-swap", category: "transport", icon: "↗",
-        title: "Swap one short car trip for transit",
+        title: "Replace 20% of car travel with rail",
         reason: `Your petrol or diesel car travel is a major opportunity. Replacing 20% of your average car distance with rail is a practical starting point${state.profile.location ? ` if available in ${state.profile.location}` : ""}.`,
         saving: Math.max(0, fossilCarEmissions - fossilRailEmissions) * 0.2,
         impact: "High", cost: "Low cost", difficulty: state.profile.transport === "transit" ? "Easy" : "Moderate",
@@ -396,7 +426,7 @@
     if (hasCar) {
       add({
         id: "carpool", category: "transport", icon: "↗",
-        title: "Combine errands or carpool",
+        title: "Reduce personal-vehicle travel by 15%",
         reason: "Fewer solo vehicle kilometres can lower transport emissions without requiring a new purchase.",
         saving: averageCarEmissions * 0.15,
         impact: "Medium", cost: "Free", difficulty: "Easy",
@@ -406,7 +436,7 @@
     if (avgCats.electricity > 0) {
       add({
         id: "electricity-trim", category: "electricity", icon: "ϟ",
-        title: "Trim electricity use by 10%",
+        title: "Reduce electricity use by 10%",
         reason: "Small changes to cooling, standby power, and lighting can add up across the week.",
         saving: avgCats.electricity * 0.1,
         impact: avgCats.electricity > stats.average * 0.3 ? "High" : "Medium",
@@ -429,7 +459,7 @@
       const averageFoodWasteEmissions = averageEmissions("foodWasteKg", "foodWaste");
       add({
         id: "food-waste", category: "waste", icon: "♻",
-        title: "Prevent one quarter of food waste",
+        title: "Prevent 25% of food waste",
         reason: "Planning meals and storing leftovers well can prevent avoidable food waste.",
         saving: averageFoodWasteEmissions * 0.25,
         impact: avgCats.waste > stats.average * 0.2 ? "High" : "Medium",
@@ -442,7 +472,7 @@
         + averageEmissions("otherWasteKg", "otherWaste");
       add({
         id: "waste-sort", category: "waste", icon: "♻",
-        title: "Sort recyclable waste locally",
+        title: "Sort plastic and mixed waste for recycling",
         reason: `If local collection accepts these materials${state.profile.location ? ` near ${state.profile.location}` : ""}, sorting them can reduce mixed-waste disposal.`,
         saving: potential * 0.2,
         impact: "Low", cost: "Free", difficulty: "Easy",
@@ -470,14 +500,13 @@
     const items = recommendations();
     const container = $("#recommendationPreview");
     if (!items.length) {
-      container.innerHTML = '<div class="empty-inline">Add activity to unlock personalized recommendations.</div>';
+      container.innerHTML = '<div class="empty-inline">Log one day of travel, electricity, fuel, or waste to get practical recommendations matched to your biggest source.</div>';
       return;
     }
     container.innerHTML = items.slice(0, 3).map(item => `
       <div class="recommendation-item">
         <span class="recommendation-icon">${item.icon}</span>
-        <span class="recommendation-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.impact)} impact · ${escapeHtml(item.cost)} · ${escapeHtml(item.difficulty)}</small></span>
-        <span class="recommendation-saving">~${kg(item.saving)} kg/wk</span>
+        <span class="recommendation-copy"><small class="recommendation-source">${escapeHtml(CATEGORY_LABELS[item.category])}</small><strong>${escapeHtml(item.title)}</strong><small>Potential saving: ~${kg(item.saving)} kg CO₂e/week · ${escapeHtml(item.impact)} impact</small></span>
         <button type="button" class="mini-add" data-add-plan="${escapeHtml(item.id)}" aria-label="Add ${escapeHtml(item.title)} to plan">＋</button>
       </div>
     `).join("");
@@ -645,7 +674,7 @@
     const existing = state.records.find(record => record.date === date);
     setValue("dateExisting", existing ? "Existing entry loaded · saving will update it" : "");
     if (!existing) {
-      INPUT_FIELDS.forEach(field => { $(`#${field}`).value = 0; });
+      INPUT_FIELDS.forEach(field => { $(`#${field}`).value = ""; });
       $("#vehicleType").value = "petrolCar";
       $("#vehicleFuel").value = "petrol";
       return;
@@ -1075,7 +1104,7 @@
       saveState();
       render();
       setValue("saveMessage", `Activity for ${dateLabel(date, { year: "numeric", month: "long", day: "numeric" })} saved. Estimates updated using your configured factors.`);
-      showToast(index >= 0 ? "Daily activity updated." : "Daily activity saved.");
+      showToast(index >= 0 ? "Nice work—your daily activity has been updated." : "Nice work—your daily activity has been saved.");
       if (cloud.token && cloud.enabled) {
         const activity = Object.fromEntries(["date", "vehicleType", "vehicleFuel", ...INPUT_FIELDS].map(key => [key, record[key]]));
         apiRequest("/api/activities", { method: "POST", body: { activity, factors: record.factors } })

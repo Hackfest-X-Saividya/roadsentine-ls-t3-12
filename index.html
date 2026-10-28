@@ -81,10 +81,13 @@
 
         <section class="hero-grid" aria-label="Footprint summary">
           <article class="card footprint-card">
-            <div class="card-heading"><div><p class="eyebrow muted">LATEST MEASURED FOOTPRINT</p><p class="micro-copy" id="footprintPeriod">Average per recorded day · last 7 days</p></div><span class="date-pill" id="todayPill">TODAY</span></div>
-            <div class="footprint-number"><strong id="currentFootprint">0.0</strong><span>kg <small>CO₂e / day</small></span></div>
-            <div class="delta-line"><span class="delta-badge neutral" id="changeBadge">—</span><span id="changeCaption">Log a week of activity to see your trend</span></div>
-            <div class="hero-divider"></div>
+            <div class="card-heading"><div><p class="eyebrow muted">TOTAL FOOTPRINT</p><p class="micro-copy" id="footprintPeriod">Across your latest recorded days</p></div><span class="date-pill" id="todayPill">TODAY</span></div>
+            <div class="footprint-number"><strong id="currentFootprint">0.0</strong><span>kg <small>CO₂e total</small></span></div>
+            <p class="footprint-empty" id="footprintEmpty">Log a day of activity to see your footprint and monthly trend.</p>
+            <div class="footprint-support">
+              <div class="summary-stat"><span>Largest source</span><strong id="largestSource">—</strong><small id="largestSourceAmount">Log activity to see your largest source.</small></div>
+              <div class="summary-stat"><span>Monthly change</span><strong class="summary-change neutral" id="changeBadge">—</strong><small id="changeCaption">Log activity in two months to compare.</small></div>
+            </div>
             <div class="footprint-footer"><span>Target <strong id="targetDaily">Set a target</strong></span><button class="text-button" type="button" data-scroll="#planner">View progress <span>→</span></button></div>
           </article>
           <article class="card target-card">
@@ -92,8 +95,9 @@
             <p class="eyebrow muted">YOUR REDUCTION GOAL</p>
             <h2 id="targetSummary">Make a goal that works for you</h2>
             <p class="target-description" id="targetDescription">Set a target and Carbon Copilot will help you turn it into practical weekly actions.</p>
-            <div class="progress-label"><span>Progress to goal</span><strong id="goalProgressText">0%</strong></div>
-            <div class="progress-track"><span id="goalProgressBar"></span></div>
+            <div class="progress-label"><span>Monthly target progress</span><strong id="goalProgressText">0%</strong></div>
+            <div class="progress-track" role="progressbar" aria-label="Monthly reduction goal progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="goalProgressBar"></span></div>
+            <p class="goal-progress-copy" id="monthlyGoalText">Set a goal and log activity to track progress.</p>
             <button class="text-button target-link" type="button" data-scroll="#planner">Open your planner <span>→</span></button>
           </article>
         </section>
@@ -162,31 +166,31 @@
             <p class="factor-source">Default factors are illustrative, editable estimates for personal planning—not a formal inventory. Grid electricity varies by region and year. See factor sources and assumptions in <a href="README.md#emission-factors" target="_blank" rel="noreferrer">the project notes</a>.</p>
           </div>
           <form id="activityForm">
-            <div class="form-topline"><label class="field-label" for="entryDate">Activity date</label><span class="entry-note">All amounts are user-entered unless noted.</span></div>
+            <div class="form-topline"><label class="field-label" for="entryDate">Activity date</label><span class="entry-note">Examples: car 12 km · electricity 8 kWh · food waste 0.3 kg. Units appear beside each field.</span></div>
             <div class="date-field"><input type="date" id="entryDate" required><span class="date-existing" id="dateExisting"></span></div>
             <div class="activity-form-grid">
               <fieldset class="activity-group"><legend><span class="group-icon transport">↗</span>Transportation <small>distance for the day</small></legend>
                 <label class="field-label" for="vehicleDistance">Personal vehicle distance <span>km</span></label>
-                <div class="input-unit"><input id="vehicleDistance" type="number" min="0" step="0.1" value="0"><span>km</span></div>
+                <div class="input-unit"><input id="vehicleDistance" type="number" min="0" step="0.1" value="0" placeholder="e.g. 12"><span>km</span></div>
                 <label class="field-label" for="vehicleType">Vehicle type &amp; fuel</label>
                 <div class="paired-fields"><select id="vehicleType" aria-label="Vehicle type"><option value="petrolCar">Car</option><option value="motorcycle">Motorcycle</option><option value="electricCar">Electric car</option><option value="active">Walking / cycling</option></select><select id="vehicleFuel" aria-label="Vehicle fuel"><option value="petrol">Petrol</option><option value="diesel">Diesel</option></select></div>
                 <p class="field-hint">Car and motorcycle distance uses a per-km estimate. Vehicle fuel litres are not entered again below.</p>
-                <label class="field-label" for="busDistance">Bus / shared transit <span>passenger-km</span></label><div class="input-unit"><input id="busDistance" type="number" min="0" step="0.1" value="0"><span>km</span></div>
-                <label class="field-label" for="railDistance">Rail / metro <span>passenger-km</span></label><div class="input-unit"><input id="railDistance" type="number" min="0" step="0.1" value="0"><span>km</span></div>
+                <label class="field-label" for="busDistance">Bus / shared transit <span>passenger-km</span></label><div class="input-unit"><input id="busDistance" type="number" min="0" step="0.1" value="0" placeholder="e.g. 8"><span>km</span></div>
+                <label class="field-label" for="railDistance">Rail / metro <span>passenger-km</span></label><div class="input-unit"><input id="railDistance" type="number" min="0" step="0.1" value="0" placeholder="e.g. 15"><span>km</span></div>
               </fieldset>
               <fieldset class="activity-group"><legend><span class="group-icon electricity">ϟ</span>Electricity <small>home or workspace</small></legend>
-                <label class="field-label" for="electricityKwh">Electricity consumed <span>kWh</span></label><div class="input-unit"><input id="electricityKwh" type="number" min="0" step="0.1" value="0"><span>kWh</span></div>
+                <label class="field-label" for="electricityKwh">Electricity consumed <span>kWh</span></label><div class="input-unit"><input id="electricityKwh" type="number" min="0" step="0.1" value="0" placeholder="e.g. 8"><span>kWh</span></div>
                 <p class="field-hint">Exclude electricity used to charge an electric vehicle already counted by its distance estimate.</p>
-                <label class="field-label" for="petrolLitres">Petrol <span>non-transport fuel</span></label><div class="input-unit"><input id="petrolLitres" type="number" min="0" step="0.1" value="0"><span>L</span></div>
-                <label class="field-label" for="dieselLitres">Diesel <span>non-transport fuel</span></label><div class="input-unit"><input id="dieselLitres" type="number" min="0" step="0.1" value="0"><span>L</span></div>
-                <label class="field-label" for="lpgKg">LPG <span>non-transport fuel</span></label><div class="input-unit"><input id="lpgKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
-                <label class="field-label" for="otherFuelLitres">Other liquid fuel <span>non-transport</span></label><div class="input-unit"><input id="otherFuelLitres" type="number" min="0" step="0.1" value="0"><span>L</span></div>
+                <label class="field-label" for="petrolLitres">Petrol <span>non-transport fuel</span></label><div class="input-unit"><input id="petrolLitres" type="number" min="0" step="0.1" value="0" placeholder="e.g. 0.5"><span>L</span></div>
+                <label class="field-label" for="dieselLitres">Diesel <span>non-transport fuel</span></label><div class="input-unit"><input id="dieselLitres" type="number" min="0" step="0.1" value="0" placeholder="e.g. 0.5"><span>L</span></div>
+                <label class="field-label" for="lpgKg">LPG <span>non-transport fuel</span></label><div class="input-unit"><input id="lpgKg" type="number" min="0" step="0.1" value="0" placeholder="e.g. 0.3"><span>kg</span></div>
+                <label class="field-label" for="otherFuelLitres">Other liquid fuel <span>non-transport</span></label><div class="input-unit"><input id="otherFuelLitres" type="number" min="0" step="0.1" value="0" placeholder="e.g. 0.5"><span>L</span></div>
               </fieldset>
               <fieldset class="activity-group"><legend><span class="group-icon waste">♻</span>Waste <small>discarded per day</small></legend>
-                <label class="field-label" for="foodWasteKg">Food waste</label><div class="input-unit"><input id="foodWasteKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
-                <label class="field-label" for="paperWasteKg">Paper</label><div class="input-unit"><input id="paperWasteKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
-                <label class="field-label" for="plasticWasteKg">Plastic</label><div class="input-unit"><input id="plasticWasteKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
-                <label class="field-label" for="otherWasteKg">Other mixed waste</label><div class="input-unit"><input id="otherWasteKg" type="number" min="0" step="0.1" value="0"><span>kg</span></div>
+                <label class="field-label" for="foodWasteKg">Food waste</label><div class="input-unit"><input id="foodWasteKg" type="number" min="0" step="0.1" value="0" placeholder="e.g. 0.3"><span>kg</span></div>
+                <label class="field-label" for="paperWasteKg">Paper</label><div class="input-unit"><input id="paperWasteKg" type="number" min="0" step="0.1" value="0" placeholder="e.g. 0.1"><span>kg</span></div>
+                <label class="field-label" for="plasticWasteKg">Plastic</label><div class="input-unit"><input id="plasticWasteKg" type="number" min="0" step="0.1" value="0" placeholder="e.g. 0.1"><span>kg</span></div>
+                <label class="field-label" for="otherWasteKg">Other mixed waste</label><div class="input-unit"><input id="otherWasteKg" type="number" min="0" step="0.1" value="0" placeholder="e.g. 0.3"><span>kg</span></div>
                 <p class="field-hint">Waste factors are broad estimates and depend on treatment (landfill, recycling, composting).</p>
               </fieldset>
             </div>
