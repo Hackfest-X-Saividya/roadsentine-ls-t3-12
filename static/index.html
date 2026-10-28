@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183c2d">
+  <title>Carbon Copilot — Sustainability, made practical</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="Carbon Copilot home"><span class="brand-mark">C</span><span>carbon<span class="brand-light">copilot</span></span></a>
+    <p class="side-label">YOUR WORKSPACE</p>
+    <nav id="navigation" aria-label="Main navigation">
+      <button class="nav-link active" data-page="dashboard"><span>◫</span> Overview</button>
+      <button class="nav-link" data-page="activities"><span>＋</span> Activity log</button>
+      <button class="nav-link" data-page="advisor"><span>✳</span> Advisor</button>
+      <button class="nav-link" data-page="planner"><span>◎</span> Reduction planner</button>
+      <button class="nav-link" data-page="simulator"><span>⌁</span> What-if simulator</button>
+      <button class="nav-link" data-page="challenge"><span>♧</span> 30-day challenge</button>
+      <button class="nav-link" data-page="progress"><span>↗</span> Progress history</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="earth-card"><span class="earth-icon">✿</span><strong>Small steps add up.</strong><p>Build habits that work for your life, one day at a time.</p></div>
+      <div class="profile"><span class="avatar">Y</span><span><b>Your workspace</b><small>Private on this device</small></span><span class="dots">•••</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar"><button class="mobile-menu" id="mobileMenu" aria-label="Open navigation">☰</button><div class="breadcrumb">Workspace <span>/</span> <b id="pageTitle">Overview</b></div><div class="topbar-right"><span class="privacy"><i></i><span id="serviceStatus">Checking local mode…</span></span><button class="cloud-button" id="cloudButton">Account backup</button><button class="icon-button" id="refreshButton" aria-label="Refresh data">↻</button></div></header>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <section class="page active" id="page-dashboard">
+      <div class="page-heading"><div><p class="eyebrow">YOUR IMPACT, IN CONTEXT</p><h1>A clearer view of your footprint.</h1><p class="subheading">Track what matters. Find a next step that feels doable.</p></div><label class="period-control">Show <select id="dashboardPeriod"><option value="weekly">This week</option><option value="daily">Today</option><option value="monthly">This month</option></select></label></div>
+      <div class="metric-grid">
+        <article class="metric-card primary-metric"><div class="metric-top"><span>Estimated emissions</span><span class="metric-icon">↗</span></div><div class="metric-value"><strong id="totalEmissions">—</strong><span>kg CO₂e</span></div><p id="periodCaption">for the selected period</p><div class="metric-foot"><span class="pill pale">Estimated, not measured</span></div></article>
+        <article class="metric-card"><div class="metric-top"><span>Activities logged</span><span class="metric-icon soft">✎</span></div><div class="metric-value"><strong id="activityCount">0</strong><span>entries</span></div><p>Based on your dated records</p></article>
+        <article class="metric-card"><div class="metric-top"><span>Target progress</span><span class="metric-icon soft">◎</span></div><div class="metric-value"><strong id="targetProgress">—</strong><span id="targetProgressUnit"></span></div><p id="targetCaption">Set a target to start tracking</p><div class="progress-track"><span id="targetBar"></span></div></article>
+        <article class="metric-card"><div class="metric-top"><span>Action potential</span><span class="metric-icon soft">✳</span></div><div class="metric-value"><strong id="actionSavings">—</strong><span>kg CO₂e</span></div><p>Estimated opportunity across suggestions</p></article>
+      </div>
+      <div class="dashboard-grid">
+        <article class="panel trend-panel"><div class="panel-heading"><div><h2>Your emissions trend</h2><p>Daily totals over the last 30 days</p></div><span class="legend"><i></i> kg CO₂e</span></div><div class="chart-wrap"><canvas id="trendChart" aria-label="Daily emissions trend chart"></canvas><div class="empty-chart" id="trendEmpty">Add activities to see your trend.</div></div></article>
+        <article class="panel breakdown-panel"><div class="panel-heading"><div><h2>By category</h2><p>Selected period</p></div></div><div id="categoryBreakdown" class="category-list"></div></article>
+      </div>
+      <div class="dashboard-grid lower-grid">
+        <article class="panel"><div class="panel-heading"><div><h2>A good next step</h2><p>Practical ideas ranked by estimated impact</p></div><button class="text-button" data-go="planner">View planner →</button></div><div id="dashboardRecommendations" class="recommendation-list"></div></article>
+        <article class="panel"><div class="panel-heading"><div><h2>Largest sources</h2><p>From your logged activities</p></div><button class="text-button" data-go="activities">Activity log →</button></div><div id="largestSources" class="source-list"></div></article>
+      </div>
+      <p class="footnote">All figures are estimates based on provisional, generalized factors. Use them for personal learning, not formal reporting.</p>
+    </section>
+
+    <section class="page" id="page-activities">
+      <div class="page-heading"><div><p class="eyebrow">ACTIVITY LOG</p><h1>Make the everyday visible.</h1><p class="subheading">You enter the activity; we estimate its emissions using a documented factor.</p></div></div>
+      <div class="split-layout">
+        <article class="panel form-panel"><div class="panel-heading"><div><h2 id="activityFormTitle">Log an activity</h2><p>Required fields are marked with an asterisk.</p></div></div>
+          <form id="activityForm" class="form-grid">
+            <input id="editId" type="hidden">
+            <label>Activity category <span>*</span><select id="category" required><option value="transport">Transportation</option><option value="electricity">Electricity</option><option value="fuel">Non-transport fuel</option><option value="waste">Waste</option></select></label>
+            <label>Activity type <span>*</span><select id="subcategory" required></select></label>
+            <label>Amount <span>*</span><div class="input-unit"><input id="quantity" type="number" min="0.01" step="0.01" required placeholder="e.g. 12"><span id="quantityUnit">km</span></div><small id="quantityHint">Enter distance in kilometers.</small></label>
+            <label id="evChargingField" hidden>Of this, EV charging <small>(excluded from household estimate)</small><div class="input-unit"><input id="evCharging" type="number" min="0" step="0.01" value="0"><span>kWh</span></div><small>Use this when the electricity total includes EV charging already estimated in a vehicle-distance record.</small></label>
+            <label>Date <span>*</span><input id="activityDate" type="date" required></label>
+            <label class="full-field">Note <small>(optional)</small><input id="activityNote" maxlength="240" placeholder="Add a detail to help you remember"></label>
+            <div class="form-actions full-field"><button class="button button-primary" type="submit" id="saveActivity">Save activity</button><button class="button button-quiet" type="button" id="cancelEdit" hidden>Cancel edit</button><span id="formMessage" class="form-message"></span></div>
+          </form>
+          <div class="calculation-box" id="calculationPreview"><b>Calculation preview</b><p>Enter an amount to preview its estimated footprint.</p></div>
+        </article>
+        <article class="panel source-panel"><div class="panel-heading"><div><h2>How estimates work</h2><p>Transparent by design</p></div><span class="source-badge">PROVISIONAL</span></div><ul class="plain-list"><li><b>Formula</b><span>Activity quantity × emission factor</span></li><li><b>Source</b><span id="factorSource">Loading factor provenance…</span></li><li><b>Geography & year</b><span id="factorGeoYear">—</span></li><li><b>Boundary</b><span id="factorBoundary">—</span></li><li><b>Important assumption</b><span id="factorAssumptions">—</span></li></ul>        <div class="callout">Vehicle travel is distance-based. Non-transport fuel is separate. Electric-car distance includes a charging proxy; when logging household electricity, enter the EV charging share so it can be excluded from this estimate.</div></article>
+      </div>
+      <article class="panel table-panel"><div class="panel-heading"><div><h2>Recent activities</h2><p>Your records keep the factor snapshot used at the time.</p></div><span class="record-count" id="recordCount">0 records</span></div><div class="table-scroll"><table><thead><tr><th>Date</th><th>Activity entered</th><th>Amount</th><th>Estimated emissions</th><th>Factor / source</th><th></th></tr></thead><tbody id="activityRows"></tbody></table><div class="empty-state" id="activityEmpty">No activities yet. Add your first record above to get started.</div></div></article>
+    </section>
+
+    <section class="page" id="page-advisor">
+      <div class="page-heading"><div><p class="eyebrow">SUSTAINABILITY ADVISOR</p><h1>Helpful guidance, grounded in your data.</h1><p class="subheading">Your practical recommendations work without AI or a cloud connection.</p></div></div>
+      <div class="advisor-layout"><article class="panel advisor-intro"><span class="advisor-spark">✳</span><h2>A thoughtful next step beats a perfect plan.</h2><p>Start with the parts of your footprint you can influence. Suggestions use your saved activity factors and show estimated—not guaranteed—savings.</p><div id="advisorMode" class="mode-label">Deterministic guidance is ready</div><div id="advisorSuggestions" class="recommendation-list"></div></article><article class="panel chat-panel"><div class="panel-heading"><div><h2>Ask a follow-up</h2><p>Keep it practical: budget, time, household or campus life.</p></div></div><div id="chatHistory" class="chat-history"><div class="chat-message assistant-message">Hi! I can help you choose an achievable sustainability action. What would you like to work on?</div></div><form id="advisorForm" class="chat-form"><textarea id="advisorQuestion" rows="2" maxlength="1000" placeholder="For example: Which change could I try this week?" required></textarea><button class="button button-primary" type="submit">Ask advisor <span>→</span></button></form><p class="ai-disclaimer">Optional AI may personalize wording only. It cannot calculate or invent factors or savings.</p></article></div>
+    </section>
+
+    <section class="page" id="page-planner">
+      <div class="page-heading"><div><p class="eyebrow">REDUCTION PLANNER</p><h1>Choose a direction, then make it yours.</h1><p class="subheading">Targets help you plan. Completed actions are not proof of reduced emissions.</p></div></div>
+      <div class="planner-grid"><article class="panel"><div class="panel-heading"><div><h2>Your reduction target</h2><p>Baseline uses your recorded activity emissions.</p></div></div><form id="targetForm" class="target-form"><label>Reduce by <div class="input-unit"><input id="targetReduction" type="number" min="1" max="90" value="20" required><span>%</span></div></label><label>Over <div class="input-unit"><input id="targetDuration" type="number" min="7" max="365" value="90" required><span>days</span></div></label><button class="button button-primary" type="submit">Set my target</button></form><div id="targetDetails" class="target-details"><p>Log activities before setting your first target.</p></div></article><article class="panel"><div class="panel-heading"><div><h2>Estimated action savings</h2><p>Opportunity estimates from actions you could try</p></div></div><div id="plannerSummary" class="planner-summary"></div></article></div>
+      <article class="panel"><div class="panel-heading"><div><h2>Actions to consider</h2><p>Ranked by estimated impact; cost and difficulty are shown too.</p></div></div><div id="plannerActions" class="action-grid"></div></article>
+      <article class="panel"><div class="panel-heading"><div><h2>Actions you’ve completed</h2><p>Estimated savings stay separate from measured progress.</p></div></div><div id="completedActions" class="completed-list"></div></article>
+    </section>
+
+    <section class="page" id="page-simulator">
+      <div class="page-heading"><div><p class="eyebrow">WHAT-IF SIMULATOR</p><h1>Explore a change before you commit.</h1><p class="subheading">A scenario is a planning estimate, not a forecast or measured result.</p></div></div>
+      <article class="panel simulator-panel"><div class="sim-copy"><span class="sim-icon">⌁</span><h2>What if your footprint changed?</h2><p>Adjust a hypothetical reduction to see how it would change the total of your saved activity records.</p><label for="simulationSlider">Scenario reduction <strong id="simulationLabel">10%</strong></label><input id="simulationSlider" type="range" min="0" max="80" step="5" value="10"><div class="range-labels"><span>0%</span><span>80%</span></div></div><div class="sim-result"><span>IF YOU REDUCED BY <b id="simPct">10%</b></span><strong id="simSavings">—</strong><small>kg CO₂e estimated savings</small><hr><span>Scenario total</span><strong class="result-total" id="simTotal">—</strong><small>kg CO₂e, from saved activities</small></div></article><p class="footnote">This simple scenario applies a single percentage to your saved emissions using the factor snapshots on those records. Real-world impact depends on what changes and when.</p>
+    </section>
+
+    <section class="page" id="page-challenge">
+      <div class="page-heading"><div><p class="eyebrow">30-DAY CHALLENGE</p><h1>One small action, each day.</h1><p class="subheading">Build a streak at your own pace. Missed days are simply another chance to begin.</p></div></div>
+      <article class="challenge-hero"><div><span class="challenge-pill">A GENTLE RESET</span><h2>Make sustainability a practice, not a project.</h2><p>Choose an everyday action. Completion is a personal commitment—not a verified emissions reduction.</p></div><div class="challenge-stat"><strong id="challengeCount">0</strong><span>days completed</span><div class="progress-track"><span id="challengeBar"></span></div></div></article><div class="challenge-grid" id="challengeDays"></div>
+    </section>
+
+    <section class="page" id="page-progress">
+      <div class="page-heading"><div><p class="eyebrow">PROGRESS HISTORY</p><h1>Look back with the full picture.</h1><p class="subheading">Compare equal-length periods. Activity changes and seasonality add uncertainty.</p></div><label class="period-control">Compare <select id="progressDays"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="180">Last 180 days</option></select></label></div>
+      <div class="metric-grid progress-metrics"><article class="metric-card"><div class="metric-top"><span>Current period</span><span class="metric-icon soft">●</span></div><div class="metric-value"><strong id="progressCurrent">—</strong><span>kg CO₂e</span></div><p id="progressCurrentCount">in selected period</p></article><article class="metric-card"><div class="metric-top"><span>Baseline period</span><span class="metric-icon soft">◷</span></div><div class="metric-value"><strong id="progressBaseline">—</strong><span>kg CO₂e</span></div><p>Previous equal-length window</p></article><article class="metric-card"><div class="metric-top"><span>Observed change</span><span class="metric-icon soft">↗</span></div><div class="metric-value"><strong id="progressChange">—</strong><span id="progressChangeUnit">kg CO₂e</span></div><p id="progressPercent">Activity totals compared</p></article><article class="metric-card"><div class="metric-top"><span>Planned action savings</span><span class="metric-icon soft">✳</span></div><div class="metric-value"><strong id="progressEstimated">—</strong><span>kg CO₂e</span></div><p>Estimated separately—not measured</p></article></div>
+      <div class="dashboard-grid lower-grid"><article class="panel"><div class="panel-heading"><div><h2>Target check-in</h2><p>Estimated plan alongside observed activity.</p></div></div><div id="progressTarget" class="progress-target"></div></article><article class="panel"><div class="panel-heading"><div><h2>Completed actions</h2><p>These are plans, not verified reductions.</p></div></div><div id="progressActions" class="completed-list"></div></article></div><article class="panel"><div class="panel-heading"><div><h2>How to read this comparison</h2></div></div><p class="interpretation" id="progressInterpretation"></p></article>
+    </section>
+    <footer class="app-footer">Carbon Copilot <span>•</span> Personal estimates, practical choices, clearer progress.</footer>
+  </main>
+  <dialog id="cloudDialog" class="cloud-dialog">
+    <form method="dialog" class="dialog-close-row"><button class="dialog-close" aria-label="Close dialog">×</button></form>
+    <div id="cloudSignedOut">
+      <p class="eyebrow">OPTIONAL CLOUD BACKUP</p><h2>Keep a copy in your account.</h2>
+      <p class="dialog-copy">Your app works locally without an account. Sign in to your configured Supabase project to back up this device's activity, target, and completed actions. Your data remains local too.</p>
+      <form id="cloudAuthForm" class="cloud-auth-form">
+        <label>Email<input id="cloudEmail" type="email" autocomplete="username" required></label>
+        <label>Password<input id="cloudPassword" type="password" autocomplete="current-password" maxlength="1024" required></label>
+        <div class="cloud-form-actions"><button class="button button-primary" type="submit">Sign in</button><button class="button button-quiet" id="cloudSignUp" type="button">Create account</button></div>
+      </form>
+      <p id="cloudAuthMessage" class="cloud-message" role="status">Credentials are sent only to this app's backend and your configured Supabase Auth service.</p>
+    </div>
+    <div id="cloudSignedIn" hidden>
+      <p class="eyebrow">ACCOUNT BACKUP</p><h2>Signed in securely.</h2><p class="dialog-copy">Back up the activities, target, and completed actions currently stored on this device. Existing cloud rows with matching IDs are updated. This is a one-way backup; it does not download cloud records.</p>
+      <p class="signed-in-user" id="cloudUserEmail"></p><div class="cloud-form-actions"><button class="button button-primary" id="cloudBackup" type="button">Back up local data</button><button class="button button-quiet" id="cloudSignOut" type="button">Sign out</button></div><p id="cloudBackupMessage" class="cloud-message" role="status"></p>
+    </div>
+  </dialog>
+</body>
+</html>
